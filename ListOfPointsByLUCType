@@ -1,0 +1,41 @@
+var points = ee.Geometry.MultiPoint([
+
+[-8.611118,  41.147610], // Urban
+[-8.832963,  41.690937], // Urban 
+[-9.137294,  38.709498], // Urban
+
+[-8.936192,  38.915126], // Agriculture, rice fields 
+[-8.799194,  39.080529], // Agriculture, irrigated land 
+[-8.660068,  41.473792], // Agriculture, annual crops
+[-8.786169,  41.714940], // Agriculture, annual crops
+[-8.040545,  37.740470], // Non-irrigated arable land
+[-7.869313,  41.155305], // Vineyeards
+[-7.786793,  41.182720], // Vineyeards 
+
+[-8.645273,  41.481805], // Mixed forest, pine and oak
+[-6.979213,  41.695547], // Coniferous forest
+[-8.849557,  41.724666], // Coniferous forest, maritime pine
+[-9.014289,  39.751502], // Coniferous forest
+[-8.713733,  38.374178], // Coniferous forest, Setúbal
+[-8.284018,  41.818183], // Broadleaf forest, oak
+[-8.151166,  41.789738], // Broadleaf forest
+[-7.917131,  41.885765], // Broadleaf forest
+[-7.061342,  41.449262], // Broadleaf forest
+
+[-8.821137,  41.748027], // Sparsely vegetated areas, shrubland 
+[-8.840177,  41.752333], // Sparsely vegetated areas, shrubland
+[-6.899133,  41.049832], // Transitional woodland-shrubland
+
+[-7.410011,  38.282250], // Water bodies, Alqueva
+[-8.194189,  41.775663], // Water bodies, Barragem V. Furnas 
+[-8.701132,  40.673974], // Salt marshes, Ria de Aveiro
+[-8.632161,  40.692142], // Salt marshes
+]
+,'EPSG:4326');
+
+// All points
+print(points);
+
+// Get a single point from the list
+print(points.geometries().get(0));
+
