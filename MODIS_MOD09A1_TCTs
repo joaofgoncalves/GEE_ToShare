@@ -1,9 +1,10 @@
-/**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var visParams_wet = {"opacity":1,"bands":["wetness"],"min":-0.3196679524427383,"max":-0.06269480453543985,"palette":["ffffff","0000ff"]},
-    visParams_bri = {"opacity":1,"bands":["brightness"],"min":0.12142742558179459,"max":0.5665368087615084,"palette":["ffffff","ff0000"]},
-    visParams_grn = {"opacity":1,"bands":["greenness"],"min":-0.08097659383855038,"max":0.22757634960157275,"palette":["ffffff","008000"]},
-    pt = /* color: #d63000 */ee.Geometry.Point([-4.54833984375, 40.111688665595956]);
-/***** End of imports. If edited, may not auto-convert in the playground. *****/
+
+
+var visParams_wet = {"opacity":1,"bands":["wetness"],"min":-0.3196679524427383,"max":-0.06269480453543985,"palette":["ffffff","0000ff"]};
+var visParams_bri = {"opacity":1,"bands":["brightness"],"min":0.12142742558179459,"max":0.5665368087615084,"palette":["ffffff","ff0000"]};
+var visParams_grn = {"opacity":1,"bands":["greenness"],"min":-0.08097659383855038,"max":0.22757634960157275,"palette":["ffffff","008000"]};
+var visParams = {bands: ['B', 'G', 'W'], gamma: 2.15};
+
 
 // Map function used to calculate TCT transform for brightness, greenness and wetness components 
  
@@ -71,10 +72,16 @@ var tct_grn_med_2017 = mod.select('greenness').median();
 var tct_bri_med_2017 = mod.select('brightness').median();
 var tct_wet_med_2017 = mod.select('wetness').median();
 
+var TCT_2017_med = tct_bri_med_2017.unitScale(0,1).
+                    addBands(tct_grn_med_2017.unitScale(0,1)).
+                    addBands(tct_wet_med_2017.unitScale(0,1)).
+                    rename(['B','G','W']);
+
 // Map it!
 Map.setCenter(-4.54, 40.11, 6);
+Map.addLayer(TCT_2017_med, visParams, 'TCT RGB - Bri / Grn / Wet');/*
 Map.addLayer(tct_grn_med_2017,visParams_grn,'TCT Greenness 2017 median');
 Map.addLayer(tct_bri_med_2017,visParams_bri,'TCT Brightness 2017 median');
-Map.addLayer(tct_wet_med_2017,visParams_wet,'TCT Wetness 2017 median');
+Map.addLayer(tct_wet_med_2017,visParams_wet,'TCT Wetness 2017 median');*/
 
 
