@@ -79,9 +79,8 @@ var TCT_2017_med = tct_bri_med_2017.unitScale(0,1).
 
 // Map it!
 Map.setCenter(-4.54, 40.11, 6);
-Map.addLayer(TCT_2017_med, visParams, 'TCT RGB - Bri / Grn / Wet');
 Map.addLayer(tct_grn_med_2017,visParams_grn,'TCT Greenness 2017 median');
 Map.addLayer(tct_bri_med_2017,visParams_bri,'TCT Brightness 2017 median');
 Map.addLayer(tct_wet_med_2017,visParams_wet,'TCT Wetness 2017 median');
-
+Map.addLayer(TCT_2017_med, visParams, 'TCT RGB - Bri / Grn / Wet');
 
