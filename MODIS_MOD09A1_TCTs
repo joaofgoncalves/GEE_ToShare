@@ -1,0 +1,78 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var visParams_wet = {"opacity":1,"bands":["wetness"],"min":-0.3196679524427383,"max":-0.06269480453543985,"palette":["ffffff","0000ff"]},
+    visParams_bri = {"opacity":1,"bands":["brightness"],"min":0.12142742558179459,"max":0.5665368087615084,"palette":["ffffff","ff0000"]},
+    visParams_grn = {"opacity":1,"bands":["greenness"],"min":-0.08097659383855038,"max":0.22757634960157275,"palette":["ffffff","008000"]};
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+
+// Map function used to calculate TCT transform for brightness, greenness and wetness components 
+ 
+var MOD09A1_TCT = function(img){
+  
+  var bri = img.expression(
+    '(0.4395 * b1_Red) + (0.5945 * b2_NIR) + (0.2460 * b3_Blue) + (0.3918 * b4_Green) + (0.3506 * b5_SWIR) + (0.2136 * b6_SWIR) + (0.2678 * b7_SWIR)',
+    {
+      'b1_Red': img.select('sur_refl_b01').toDouble().multiply(1E-4),
+      'b2_NIR': img.select('sur_refl_b02').toDouble().multiply(1E-4),
+      'b3_Blue': img.select('sur_refl_b03').toDouble().multiply(1E-4),
+      'b4_Green': img.select('sur_refl_b04').toDouble().multiply(1E-4),
+      'b5_SWIR': img.select('sur_refl_b05').toDouble().multiply(1E-4),
+      'b6_SWIR': img.select('sur_refl_b06').toDouble().multiply(1E-4),
+      'b7_SWIR': img.select('sur_refl_b07').toDouble().multiply(1E-4)
+    }
+  );
+  
+    var grn = img.expression(
+    '(-0.4064 * b1_Red) + (0.5129 * b2_NIR) + (-0.2744 * b3_Blue) + (-0.2893 * b4_Green) + (0.4882 * b5_SWIR) + (-0.0036 * b6_SWIR) + (-0.4169 * b7_SWIR)',
+    {
+      'b1_Red': img.select('sur_refl_b01').toDouble().multiply(1E-4),
+      'b2_NIR': img.select('sur_refl_b02').toDouble().multiply(1E-4),
+      'b3_Blue': img.select('sur_refl_b03').toDouble().multiply(1E-4),
+      'b4_Green': img.select('sur_refl_b04').toDouble().multiply(1E-4),
+      'b5_SWIR': img.select('sur_refl_b05').toDouble().multiply(1E-4),
+      'b6_SWIR': img.select('sur_refl_b06').toDouble().multiply(1E-4),
+      'b7_SWIR': img.select('sur_refl_b07').toDouble().multiply(1E-4)
+    }
+  );
+  
+    var wet = img.expression(
+    '(0.1147 * b1_Red) + (0.2489 * b2_NIR) + (0.2408 * b3_Blue) + (0.3132 * b4_Green) + (-0.3122 * b5_SWIR) + (-0.6416 * b6_SWIR) + (-0.5087 * b7_SWIR) ',
+    {
+      'b1_Red': img.select('sur_refl_b01').toDouble().multiply(1E-4),
+      'b2_NIR': img.select('sur_refl_b02').toDouble().multiply(1E-4),
+      'b3_Blue': img.select('sur_refl_b03').toDouble().multiply(1E-4),
+      'b4_Green': img.select('sur_refl_b04').toDouble().multiply(1E-4),
+      'b5_SWIR': img.select('sur_refl_b05').toDouble().multiply(1E-4),
+      'b6_SWIR': img.select('sur_refl_b06').toDouble().multiply(1E-4),
+      'b7_SWIR': img.select('sur_refl_b07').toDouble().multiply(1E-4)
+    }
+  );
+  
+    return bri.
+    addBands(grn).
+    addBands(wet).
+    rename(['brightness','greenness','wetness']).
+    set('system:index', img.get('system:index')).
+    set('system:time_start', img.get('system:time_start')).
+    set('system:time_end', img.get('system:time_end'));
+  
+};
+
+
+// Application example -------------------------------------------------- //
+
+// Filter data for 2017 and apply TCT
+var mod = ee.ImageCollection('MODIS/006/MOD09A1').
+          filterDate('2017-01-01', '2017-12-31').
+          map(MOD09A1_TCT);
+
+// Calculate the 2017 median for each component
+var tct_grn_med_2017 = mod.select('greenness').median();
+var tct_bri_med_2017 = mod.select('brightness').median();
+var tct_wet_med_2017 = mod.select('wetness').median();
+
+// Map it!
+Map.addLayer(tct_grn_med_2017,visParams_grn,'TCT Greenness 2017 median');
+Map.addLayer(tct_bri_med_2017,visParams_bri,'TCT Brightness 2017 median');
+Map.addLayer(tct_wet_med_2017,visParams_wet,'TCT Wetness 2017 median');
+
+
