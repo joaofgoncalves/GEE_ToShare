@@ -39,6 +39,7 @@ print(EVI_winter_mean_2002_2010);
 
 
 // Map results
+// Made some corrections to the image layers (the first function pulls only the first image from the collection hence 2002)
 Map.centerObject(bbox, 5);
 Map.addLayer(ee.Image(EVI_winter_mean.first()), {min:0, max:10000}, 'EVI winter mean for 2002');
 Map.addLayer(EVI_winter_mean_2002_2010, {min:0, max:10000}, 'EVI winter mean 2002-2010 (9-year average)');
