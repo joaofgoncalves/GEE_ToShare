@@ -14,9 +14,13 @@ var yrEnd = 2010;
 // Make a list with a sequence of years
 var yrs = ee.List.sequence(yrStart, yrEnd);
 
+
+////// WINTER SEASON ----------------------------------------------------------------------------
+
+
 // Create the collection for winter time only but across all focal years
-var modisEVI = ee.ImageCollection('MODIS/006/MOD13Q1').
-          filterDate(yrStart + '-01-01', yrEnd + '-03-31').
+var modisEVI_wint = ee.ImageCollection('MODIS/006/MOD13Q1').
+          filterDate(yrStart + '-12-01', yrEnd + '-03-31').
           filterBounds(bbox).
           select('EVI');
           
@@ -24,7 +28,7 @@ var modisEVI = ee.ImageCollection('MODIS/006/MOD13Q1').
 // This will make an ImageCollection with nine layers (one per year)
 var EVI_winter_mean = ee.ImageCollection.fromImages(
       yrs.map(function (yr) {
-        return modisEVI.filter(ee.Filter.calendarRange(yr, yr, 'year')).
+        return modisEVI_wint.filter(ee.Filter.calendarRange(yr, yr, 'year')).
         mean().
         set('year', yr);
 }));
@@ -38,8 +42,41 @@ var EVI_winter_mean_2002_2010 = EVI_winter_mean.mean();
 print(EVI_winter_mean_2002_2010);
 
 
+////// SUMMER SEASON ----------------------------------------------------------------------------
+
+
+// Create the collection for winter time only but across all focal years
+var modisEVI_sprg = ee.ImageCollection('MODIS/006/MOD13Q1').
+          filterDate(yrStart + '-04-01', yrEnd + '-05-31').
+          filterBounds(bbox).
+          select('EVI');
+          
+// Calculate the seasonal winter means for each year between 2002 and 2010
+// This will make an ImageCollection with nine layers (one per year)
+var EVI_sprg_mean = ee.ImageCollection.fromImages(
+      yrs.map(function (yr) {
+        return modisEVI_sprg.filter(ee.Filter.calendarRange(yr, yr, 'year')).
+        mean().
+        set('year', yr);
+}));
+
+print(EVI_sprg_mean);
+
+// Then you can aggregate the annual winter means to an inter-annual mean simply like this:
+// This could also be performed for example for sesaonal amplitudes (for example)
+var EVI_sprg_mean_2002_2010 = EVI_sprg_mean.mean();
+
+print(EVI_sprg_mean_2002_2010);
+
+
 // Map results
 // Made some corrections to the image layers (the first function pulls only the first image from the collection hence 2002)
 Map.centerObject(bbox, 5);
 Map.addLayer(ee.Image(EVI_winter_mean.first()), {min:0, max:10000}, 'EVI winter mean for 2002');
 Map.addLayer(EVI_winter_mean_2002_2010, {min:0, max:10000}, 'EVI winter mean 2002-2010 (9-year average)');
+
+Map.addLayer(ee.Image(EVI_sprg_mean.first()), {min:0, max:10000}, 'EVI winter mean for 2002');
+Map.addLayer(EVI_winter_sprg_2002_2010, {min:0, max:10000}, 'EVI winter mean 2002-2010 (9-year average)');
+
+
+
