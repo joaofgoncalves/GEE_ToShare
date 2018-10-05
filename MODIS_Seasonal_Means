@@ -42,16 +42,16 @@ var EVI_winter_mean_2002_2010 = EVI_winter_mean.mean();
 print(EVI_winter_mean_2002_2010);
 
 
-////// SUMMER SEASON ----------------------------------------------------------------------------
+////// SPRING SEASON ----------------------------------------------------------------------------
 
 
-// Create the collection for winter time only but across all focal years
+// Create the collection for spring time only but across all focal years
 var modisEVI_sprg = ee.ImageCollection('MODIS/006/MOD13Q1').
           filterDate(yrStart + '-04-01', yrEnd + '-05-31').
           filterBounds(bbox).
           select('EVI');
           
-// Calculate the seasonal winter means for each year between 2002 and 2010
+// Calculate the seasonal spring means for each year between 2002 and 2010
 // This will make an ImageCollection with nine layers (one per year)
 var EVI_sprg_mean = ee.ImageCollection.fromImages(
       yrs.map(function (yr) {
@@ -62,7 +62,7 @@ var EVI_sprg_mean = ee.ImageCollection.fromImages(
 
 print(EVI_sprg_mean);
 
-// Then you can aggregate the annual winter means to an inter-annual mean simply like this:
+// Then you can aggregate the annual spring means to an inter-annual mean simply like this:
 // This could also be performed for example for sesaonal amplitudes (for example)
 var EVI_sprg_mean_2002_2010 = EVI_sprg_mean.mean();
 
