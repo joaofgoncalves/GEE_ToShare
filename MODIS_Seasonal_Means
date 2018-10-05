@@ -1,0 +1,44 @@
+
+var bbox = ee.Geometry.Polygon(
+        [[[-10.1513671875, 44.11914151643737],
+          [-10.1513671875, 35.496456056584165],
+          [1.669921875, 36.06686213257888],
+          [4.306640625, 42.90816007196054],
+          [-1.7138671875, 44.15068115978094]]]);
+
+// Start year
+var yrStart = 2002;
+// End year
+var yrEnd = 2010;
+
+// Make a list with a sequence of years
+var yrs = ee.List.sequence(yrStart, yrEnd);
+
+// Create the collection for winter time only but across all focal years
+var modisEVI = ee.ImageCollection('MODIS/006/MOD13Q1').
+          filterDate(yrStart + '-01-01', yrEnd + '-03-31').
+          filterBounds(bbox).
+          select('EVI');
+          
+// Calculate the seasonal winter means for each year between 2002 and 2010
+// This will make an ImageCollection with nine layers (one per year)
+var EVI_winter_mean = ee.ImageCollection.fromImages(
+      yrs.map(function (yr) {
+        return modisEVI.filter(ee.Filter.calendarRange(yr, yr, 'year')).
+        mean().
+        set('year', yr);
+}));
+
+print(EVI_winter_mean);
+
+// Then you can aggregate the annual winter means to an inter-annual mean simply like this:
+// This could also be performed for example for sesaonal amplitudes (for example)
+var EVI_winter_mean_2002_2010 = EVI_winter_mean.mean();
+
+print(EVI_winter_mean_2002_2010);
+
+
+// Map results
+Map.centerObject(bbox, 5);
+Map.addLayer(ee.Image(EVI_winter_mean.first()), {min:0, max:10000}, 'EVI winter mean for 2002');
+Map.addLayer(EVI_winter_mean_2002_2010, {min:0, max:10000}, 'EVI winter mean 2002-2010 (9-year average)');
