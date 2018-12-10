@@ -10,7 +10,6 @@ var ROI = /* color: #98ff00 */ee.Geometry.Polygon(
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 
 
-
 var LT_2016_prefire = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').
   filterBounds(ROI).
   filter(ee.Filter.calendarRange(5, 6, 'month')).
@@ -28,6 +27,22 @@ var LT_med_post = LT_2016_postfire.reduce(ee.Reducer.median());
 
 print(LT_2016_prefire, LT_2016_postfire); 
 print(LT_med_pre, LT_med_post);
-  
+
+Export.image.toDrive({image: LT_med_2016_pre,
+                      description: 'LT_med_2016_pre', 
+                      folder: 'GEE',
+                      region: ROI,
+                      crs: 'EPSG:32629',
+                      scale: 30
+});
+
+Export.image.toDrive({image: LT_med_2016_post,
+                      description: 'LT_med_2016_post', 
+                      folder: 'GEE',
+                      region: ROI,
+                      crs: 'EPSG:32629',
+                      scale: 30
+});
+
 Map.addLayer(ROI);
 
