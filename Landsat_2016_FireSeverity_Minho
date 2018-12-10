@@ -13,29 +13,30 @@ var geet = require('users/joaofgo/GEE_MiscTools:Landsat');
 
 // Selecciona as imagens pré-fogo para os meses 5 e 6 (maio e junho)
 // com uma cobertura de núvens inferior a 30% (6 no total)
-var LT_2016_prefire = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').
+var LT_2016_prefire = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').
   filterBounds(ROI).
   filter(ee.Filter.calendarRange(5, 6, 'month')).
   filter(ee.Filter.calendarRange(2016, 2016, 'year')).
-  filterMetadata('CLOUD_COVER_LAND','less_than', 10);
-
+  //filterMetadata('CLOUD_COVER_LAND','less_than', 10);
+  map(geet.maskOutClouds);
+  
 // Selecciona as imagens pós-fogo para os meses 9 e 10 (set e outubro)
 // com uma cobertura de núvens inferior a 30% (6 no total)
-var LT_2016_postfire = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR').
+var LT_2016_postfire = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').
   filterBounds(ROI).
   filter(ee.Filter.calendarRange(9, 10, 'month')).
   filter(ee.Filter.calendarRange(2016, 2016, 'year')).
-  filterMetadata('CLOUD_COVER_LAND','less_than', 5);
-  //map(geet.maskOutClouds);
+  //filterMetadata('CLOUD_COVER_LAND','less_than', 5);
+  map(geet.maskOutClouds);
 
 // Para as imagens seleccionadas vamos calcular a média
-var LT_med_pre = LT_2016_prefire.reduce(ee.Reducer.mean()).toDouble();
-var LT_med_post = LT_2016_postfire.reduce(ee.Reducer.mean()).toDouble();
+var LT_med_pre = LT_2016_prefire.reduce(ee.Reducer.median()).toDouble();
+var LT_med_post = LT_2016_postfire.reduce(ee.Reducer.median()).toDouble();
 
 // Imprime informação sobre as imagens
 print(LT_2016_prefire, LT_2016_postfire); 
 print(LT_med_pre, LT_med_post);
-/*
+
 // Exporta as imagens para o Google Drive
 Export.image.toDrive({image: LT_med_pre,
                       description: 'LT_med_2016_pre', 
@@ -55,4 +56,3 @@ Export.image.toDrive({image: LT_med_post,
 
 // Mostra a área de estudo
 Map.addLayer(ROI);
-*/
