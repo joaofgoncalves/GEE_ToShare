@@ -26,8 +26,8 @@ var LT_2016_postfire = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').
   filterMetadata('CLOUD_COVER_LAND','less_than', 30);
 
 // Para as imagens seleccionadas vamos calcular a média
-var LT_med_pre = LT_2016_prefire.reduce(ee.Reducer.mean());
-var LT_med_post = LT_2016_postfire.reduce(ee.Reducer.mean());
+var LT_med_pre = LT_2016_prefire.reduce(ee.Reducer.mean()).toDouble();
+var LT_med_post = LT_2016_postfire.reduce(ee.Reducer.mean()).toDouble();
 
 // Imprime informação sobre as imagens
 print(LT_2016_prefire, LT_2016_postfire); 
