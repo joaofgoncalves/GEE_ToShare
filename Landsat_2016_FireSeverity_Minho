@@ -34,7 +34,7 @@ print(LT_2016_prefire, LT_2016_postfire);
 print(LT_med_pre, LT_med_post);
 
 // Exporta as imagens para o Google Drive
-Export.image.toDrive({image: LT_med_2016_pre,
+Export.image.toDrive({image: LT_med_pre,
                       description: 'LT_med_2016_pre', 
                       folder: 'GEE',
                       region: ROI,
@@ -42,7 +42,7 @@ Export.image.toDrive({image: LT_med_2016_pre,
                       scale: 30
 });
 
-Export.image.toDrive({image: LT_med_2016_post,
+Export.image.toDrive({image: LT_med_post,
                       description: 'LT_med_2016_post', 
                       folder: 'GEE',
                       region: ROI,
