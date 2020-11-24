@@ -1,0 +1,69 @@
+
+
+var dt = ee.ImageCollection('MODIS/006/MCD43A4');
+
+var dateStart = ee.Date('2017-06-01');
+//var dateEnd = ee.Date('2018-05-31');
+
+var timeStepDays = 7;
+
+
+//var ROI = ;
+
+//--------------------------------------------------------------------------------------------------//
+
+
+// A simple function to calculate NDVI
+// Check: https://developers.google.com/earth-engine/datasets/catalog/MODIS_006_MCD43A4#bands
+var calcNDVI_MCD43A4 =  function(img){
+  return img.normalizedDifference(ee.List(["Nadir_Reflectance_Band1", "Nadir_Reflectance_Band2"]));
+};
+
+
+var Diff = dateEnd.difference(dateStart, 'day').divide(timeStepDays).round();
+
+print(Diff);
+
+var seq = ee.List.sequence(0, Diff.subtract(1), 1);
+
+print(seq);
+
+var datesToRoll = seq.map(
+  function(it){
+    return(dateStart.advance(ee.Number(it).multiply(ee.Number(timeStepDays)),'day'));
+  });
+
+print(datesToRoll);
+
+
+var dt_agg = ee.ImageCollection.fromImages(
+  seq.map(
+    function(i){
+    
+    var dtStr = ee.Date(datesToRoll.get(ee.Number(i)));
+    
+    var dtEnd = ee.Date(datesToRoll.get(ee.Number(i))).
+              advance(ee.Number(timeStepDays).subtract(1), 'day');
+    
+    return(dt.
+    filter(ee.Filter.date(dtStr, dtEnd)).
+    //filter(ee.Filter.bounds(ROI)).
+    map(calcNDVI_MCD43A4). // Aggregate bands to calculate NDVI based on b1 and b2
+    median().              // Calculate median aggregate
+    set("Date1_start", dtStr).  // Add metadata
+    set("Date2_end", dtEnd));
+              
+  }));
+  
+print(dt_agg);
+
+  
+// Multiband version of the dataset
+var dt_agg_mb = dt_agg.toBands();
+  
+//print(dt);
+print(dt_agg);
+print(dt_agg_mb);
+
+//Export.image.toDrive()
+
