@@ -3,7 +3,7 @@
 var dt = ee.ImageCollection('MODIS/006/MCD43A4');
 
 var dateStart = ee.Date('2017-06-01');
-//var dateEnd = ee.Date('2018-05-31');
+var dateEnd = ee.Date('2018-05-31');
 
 var timeStepDays = 7;
 
@@ -55,7 +55,6 @@ var dt_agg = ee.ImageCollection.fromImages(
               
   }));
   
-print(dt_agg);
 
   
 // Multiband version of the dataset
