@@ -56,7 +56,6 @@ var dt_agg = ee.ImageCollection.fromImages(
   }));
   
 
-  
 // Multiband version of the dataset
 var dt_agg_mb = dt_agg.toBands();
   
