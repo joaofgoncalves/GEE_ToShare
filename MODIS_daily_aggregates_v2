@@ -22,11 +22,11 @@ var calcNDVI_MCD43A4 =  function(img){
 
 var Diff = dateEnd.difference(dateStart, 'day').divide(timeStepDays).round();
 
-print(Diff);
+//print(Diff);
 
 var seq = ee.List.sequence(0, Diff.subtract(1), 1);
 
-print(seq);
+//print(seq);
 
 var datesToRoll = seq.map(
   function(it){
