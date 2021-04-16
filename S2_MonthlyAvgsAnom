@@ -45,7 +45,7 @@ Map.addLayer(PAS);
 // Add and select the target product from the image collection.
 var S2 = ee.ImageCollection('COPERNICUS/S2'). // Sentinel 2 Nivel 1C
                                filter(ee.Filter.calendarRange(2017,2019,'year')). // Selected only complete years
-                               //filterMetadata ('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', 35).
+                               filterMetadata ('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', 25).
                                filterBounds(PAS). // ImageCollection filtered by band and area
                                map(maskS2clouds); // Mask clouds and cirrus pixels
 //print(S2);
