@@ -13,7 +13,23 @@ var PAS =
           [-7.705139131999498, 42.392573582225225]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 
-var cld = require('users/fitoprincipe/geetools:cloud_masks')
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+
+  return image.updateMask(mask).divide(10000).
+    set('system:index', image.get('system:index')).
+    set('system:time_start', image.get('system:time_start')).
+    set('system:time_end', image.get('system:time_end'));
+}
+
 
 // Scale the NDVI with fac 0.0001*
 var scaleNDVI = function(img){
@@ -26,10 +42,9 @@ var scaleNDVI = function(img){
 // Add and select the target product from the image collection.
 var S2 = ee.ImageCollection('COPERNICUS/S2'). // Sentinel 2 Nivel 1C
                                filter(ee.Filter.calendarRange(2017,2019,'year')). // Selected only complete years
-                               //filterMetadata ('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', 20).
+                               //filterMetadata ('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', 35).
                                filterBounds(PAS). // ImageCollection filtered by band and area
-                               map(cld.sclMask(['shadow', 'cloud_low', 
-                               'cloud_medium', 'cloud_high', 'cirrus']));
+                               map(maskS2clouds);
 //print(S2);
 
 // Indices
@@ -96,7 +111,12 @@ Map.addLayer(ee.Image(monthlyNDVI.first()));
 // scale every image in the collection and convert it to a multi-band 
 // image instead of an image collection this will allow to get and export 
 // each individual image
-var NDVI2 = monthlyNDVI.map(scaleNDVI).toBands();
+//var NDVI2 = monthlyNDVI.map(scaleNDVI).toBands();
+var NDVI2 = monthlyNDVI.toBands();
+
+print(NDVI2);
+
+/*
 
 // set the counter
 var counter = 0;
@@ -128,3 +148,4 @@ for (var y = 2017; y <= 2019 ; y++) {
  counter++;
  
 }}
+*/
