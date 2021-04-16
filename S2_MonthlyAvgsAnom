@@ -7,10 +7,10 @@ var PAS =
       }
     ] */
     ee.Geometry.Polygon(
-        [[[-8.913635225749498, 42.392573582225225],
+        [[[-8.913635225749498, 41.715511818710695],
           [-8.913635225749498, 41.49370803167885],
-          [-7.705139131999498, 41.49370803167885],
-          [-7.705139131999498, 42.392573582225225]]], null, false);
+          [-8.617004366374498, 41.49370803167885],
+          [-8.617004366374498, 41.715511818710695]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 
 function maskS2clouds(image) {
@@ -24,7 +24,7 @@ function maskS2clouds(image) {
   var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
       .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
 
-  return image.updateMask(mask).divide(10000).
+  return image.updateMask(mask).toFloat().divide(10000).
     set('system:index', image.get('system:index')).
     set('system:time_start', image.get('system:time_start')).
     set('system:time_end', image.get('system:time_end'));
@@ -32,12 +32,13 @@ function maskS2clouds(image) {
 
 
 // Scale the NDVI with fac 0.0001*
-var scaleNDVI = function(img){
+/*var scaleNDVI = function(img){
   return img.toFloat().multiply(0.0001);
 };
+*/
 
 // add layer to map
-//Map.addLayer(PAS);
+Map.addLayer(PAS);
 
 // Add and select the target product from the image collection.
 var S2 = ee.ImageCollection('COPERNICUS/S2'). // Sentinel 2 Nivel 1C
@@ -60,12 +61,13 @@ return image.addBands(image.normalizedDifference(['B8', 'B4']).
 
 // Add NDVI band to image collection
 var S2 = S2.map(addNDVI);
+
 // Extract NDVI band and create NDVI median composite image
 var NDVI = S2.select(['nd']);
 
-//print(NDVI);
+print(NDVI);
 
-//Map.addLayer(NDVI);
+Map.addLayer(NDVI);
 
 // Set the time range by month
 var means = ee.ImageCollection(ee.List.sequence(1, 12)
@@ -116,7 +118,7 @@ var NDVI2 = monthlyNDVI.toBands();
 
 print(NDVI2);
 
-/*
+
 
 // set the counter
 var counter = 0;
@@ -128,8 +130,8 @@ for (var y = 2017; y <= 2019 ; y++) {
   
   // select each layer in the NDVI anomaly multiband image
   var img = ee.Image(NDVI2.select(ee.Number(counter))); 
-  print(ee.Number(counter));
-  print(img);
+  //print(ee.Number(counter));
+  //print(img);
  
   // store the image
   Export.image.toDrive({
@@ -148,4 +150,3 @@ for (var y = 2017; y <= 2019 ; y++) {
  counter++;
  
 }}
-*/
