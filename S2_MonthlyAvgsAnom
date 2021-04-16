@@ -116,9 +116,9 @@ Map.addLayer(ee.Image(monthlyNDVI.first()));
 // image instead of an image collection this will allow to get and export 
 // each individual image
 //var NDVI2 = monthlyNDVI.map(scaleNDVI).toBands();
-var NDVI2 = monthlyNDVI.toBands();
+var NDVI_monthlyAnomaly = monthlyNDVI.toBands();
 
-print(NDVI2);
+print(NDVI_monthlyAnomaly);
 
 
 
@@ -131,7 +131,7 @@ for (var y = 2017; y <= 2019 ; y++) {
   for (var m = 1; m <= 12 ; m++) {
   
   // select each layer in the NDVI anomaly multiband image
-  var img = ee.Image(NDVI2.select(ee.Number(counter))); 
+  var img = ee.Image(NDVI_monthlyAnomaly.select(ee.Number(counter))); 
   //print(ee.Number(counter));
   //print(img);
  
