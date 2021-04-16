@@ -13,6 +13,8 @@ var PAS =
           [-8.617004366374498, 41.715511818710695]]], null, false);
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 
+// Mask clouds and scale images
+
 function maskS2clouds(image) {
   var qa = image.select('QA60');
 
@@ -45,7 +47,7 @@ var S2 = ee.ImageCollection('COPERNICUS/S2'). // Sentinel 2 Nivel 1C
                                filter(ee.Filter.calendarRange(2017,2019,'year')). // Selected only complete years
                                //filterMetadata ('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', 35).
                                filterBounds(PAS). // ImageCollection filtered by band and area
-                               map(maskS2clouds);
+                               map(maskS2clouds); // Mask clouds and cirrus pixels
 //print(S2);
 
 // Indices
