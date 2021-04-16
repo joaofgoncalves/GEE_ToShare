@@ -1,0 +1,130 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var PAS = 
+    /* color: #98ff00 */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-8.913635225749498, 42.392573582225225],
+          [-8.913635225749498, 41.49370803167885],
+          [-7.705139131999498, 41.49370803167885],
+          [-7.705139131999498, 42.392573582225225]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+
+var cld = require('users/fitoprincipe/geetools:cloud_masks')
+
+// Scale the NDVI with fac 0.0001*
+var scaleNDVI = function(img){
+  return img.toFloat().multiply(0.0001);
+};
+
+// add layer to map
+//Map.addLayer(PAS);
+
+// Add and select the target product from the image collection.
+var S2 = ee.ImageCollection('COPERNICUS/S2'). // Sentinel 2 Nivel 1C
+                               filter(ee.Filter.calendarRange(2017,2019,'year')). // Selected only complete years
+                               //filterMetadata ('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', 20).
+                               filterBounds(PAS). // ImageCollection filtered by band and area
+                               map(cld.sclMask(['shadow', 'cloud_low', 
+                               'cloud_medium', 'cloud_high', 'cirrus']));
+//print(S2);
+
+// Indices
+
+// Compute NDVI (B8-B4)/(B8+B4)
+// Function to calculate and add an NDVI band
+var addNDVI = function(image) {
+return image.addBands(image.normalizedDifference(['B8', 'B4']).
+    set('system:index', image.get('system:index')).
+    set('system:time_start', image.get('system:time_start')).
+    set('system:time_end', image.get('system:time_end')));
+};
+
+// Add NDVI band to image collection
+var S2 = S2.map(addNDVI);
+// Extract NDVI band and create NDVI median composite image
+var NDVI = S2.select(['nd']);
+
+//print(NDVI);
+
+//Map.addLayer(NDVI);
+
+// Set the time range by month
+var means = ee.ImageCollection(ee.List.sequence(1, 12)
+  .map(function(m) {
+    return NDVI.filter(ee.Filter.calendarRange(m, m, 'month'))
+        .mean()
+        .set('month', m);
+}));
+
+//print(means);
+
+//Map.addLayer(means);
+
+var start = ee.Date('2017-01-01');
+var months = ee.List.sequence(0, 35);
+var dates = months.map(function(index) {
+  return start.advance(index, 'month');
+});
+
+print(dates);
+
+var monthlyNDVI = ee.ImageCollection.fromImages(
+      dates.map(function(date) {
+        var beginning = date;
+        var end = ee.Date(date).advance(1, 'month');
+        var mean = NDVI.filterDate(beginning, end)
+                    .mean()
+                    .set('date', date);
+        
+        var month = ee.Date(date).getRelative('month', 'year').add(1);
+        return mean.subtract(
+            means.filter(ee.Filter.eq('month', month)).first())
+            .set('date', date);
+}));
+
+print(monthlyNDVI);
+
+
+
+
+Map.addLayer(ee.Image(monthlyNDVI.first()));
+
+// scale every image in the collection and convert it to a multi-band 
+// image instead of an image collection this will allow to get and export 
+// each individual image
+var NDVI2 = monthlyNDVI.map(scaleNDVI).toBands();
+
+// set the counter
+var counter = 0;
+
+// loop through the year
+for (var y = 2017; y <= 2019 ; y++) {
+  // loop through the months
+  for (var m = 1; m <= 12 ; m++) {
+  
+  // select each layer in the NDVI anomaly multiband image
+  var img = ee.Image(NDVI2.select(ee.Number(counter))); 
+  print(ee.Number(counter));
+  print(img);
+ 
+  // store the image
+  Export.image.toDrive({
+       image: img,
+       description: 'NDVI_yr_' + y.toString() + "mo" + m.toString(),
+       folder: 'CS_NDVI',
+       scale: 30, // Replaced this value to best resolution
+       region: PAS,
+       fileFormat: 'GeoTIFF', 
+       crs: 'EPSG:4326',
+       maxPixels: 1e13 // Added output projection
+       
+ });
+ 
+ // increment the count variable used to select each NDVI anomaly layer
+ counter++;
+ 
+}}
