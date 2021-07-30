@@ -1,0 +1,334 @@
+
+// Import tools
+var modtools = require('users/joaofgo/GEE_MiscTools:MODIS');
+
+
+var viTSdateOfMax = function(imgCol){
+  imgCol = modtools.addDOYband(imgCol);
+  // Turn image collection into an array
+  var imgArray = imgCol.toArray();
+  // sort imgArray by the first band, keeping other bands
+  var axes = { 
+    image: 0, // Time axis
+    band: 1   // Band axis
+  };
+  var sort = imgArray.arraySlice(axes.band, 0, 1);  // select bands from index 0 to 1 (selected VI)
+  var sorted = imgArray.arraySort(sort);
+  // extract the last image with the max value and the date 
+  var len = sorted.arrayLength(axes.image);
+  var values = sorted.arraySlice(axes.image, len.subtract(1), len);
+  // convert back to an image  
+  var maxval = values.
+                arrayProject([axes.band]).
+                arrayFlatten([["maxvalue", 'doy']]);
+  return(maxval.select(1));
+};
+
+
+// Start year
+var yrStart = 2001;
+// End year
+var yrEnd = 2018;
+// Spatial resolution (in meters)
+var outSpatialRes = 10000;
+// Output folder
+var outFolder = '';
+// Output CRS
+var outCRS = 'EPSG:4326';
+// Output maximum nr of pixels
+var outMaxPixValue = 1E13;
+
+// Which variable? (one value only)
+var do_LST     = false;
+var do_ET      = false;
+var do_Albedo  = false; 
+var do_EVI     = true;
+var do_TCTbri  = false;
+var do_TCTgrn  = false;
+var do_TCTwet  = false;
+var do_LAI     = false;
+var do_FPAR    = false;
+var do_GPP     = false;
+
+// Which stats? (multiple values allowed)
+var calc_Avg   = false;
+var calc_Min   = false;
+var calc_Max   = false;
+var calc_Std   = false;
+var calc_Dmx   = true;
+var calc_Spg   = true;
+var calc_Wnt   = true;
+
+
+// Make a list with a sequence of years
+var yrs = ee.List.sequence(yrStart, yrEnd);
+
+
+/* ------------------------------------------------------------------------ */
+/* Generate the dataset                                                     */
+/* ------------------------------------------------------------------------ */
+
+if(do_Albedo){
+  
+  var imgColl = ee.ImageCollection('MODIS/006/MCD43A3').
+                  select(["Albedo_BSA_vis","Albedo_BSA_nir","Albedo_BSA_shortwave",
+                          "Albedo_WSA_vis","Albedo_WSA_nir","Albedo_WSA_shortwave"]).
+                          filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+                          map(modtools.MDC43A3_AvgAlbedo).
+                          sort('system:time_start');
+            
+  var varName = "Albedo";
+}
+
+if(do_EVI){
+
+  var imgColl = ee.ImageCollection('MODIS/006/MOD13Q1').
+                  filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+                  select('EVI');
+  
+  var varName = "EVI";
+}
+
+if(do_LST){
+  
+  var imgColl =  ee.ImageCollection("MODIS/006/MOD11A2").
+                  filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+                  select(["LST_Day_1km"]).
+                  map(function(img){return img.toFloat().
+                                      multiply(0.02).
+                                      rename('lst').
+                                      set('system:time_start', img.get('system:time_start')).
+                                      set('system:time_end', img.get('system:time_end'))}).
+                  sort('system:time_start');
+
+  var varName = "LST";
+}
+
+if(do_ET){
+  
+  var imgColl = ee.ImageCollection("MODIS/006/MOD16A2").
+    filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+    select(["ET"]).
+    map(function(img){return img.toFloat().
+                        multiply(0.1).
+                        rename('et').
+                        set('system:time_start', img.get('system:time_start')).
+                        set('system:time_end', img.get('system:time_end'))}).
+    sort('system:time_start');
+  
+  var varName = "ET";
+}
+
+if(do_TCTbri){
+  
+  var imgColl = ee.ImageCollection('MODIS/006/MOD09A1').
+                  filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+                  map(modtools.MOD09A1_TCT).
+                  select(ee.List(['brightness'])).
+                  sort('system:time_start');
+            
+  var varName = "TCTbri";
+}
+
+if(do_TCTgrn){
+  
+  var imgColl = ee.ImageCollection('MODIS/006/MOD09A1').
+                  filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+                  map(modtools.MOD09A1_TCT).
+                  select(ee.List(['greenness'])).
+                  sort('system:time_start');
+  
+  var varName = "TCTgrn";        
+}
+
+if(do_TCTwet){
+  
+  var imgColl = ee.ImageCollection('MODIS/006/MOD09A1').
+                  filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+                  map(modtools.MOD09A1_TCT).
+                  select(ee.List(['wetness'])).
+                  sort('system:time_start');
+  
+  var varName = "TCTwet"; 
+}
+
+if(do_LAI){
+  
+  var imgColl = ee.ImageCollection("MODIS/006/MCD15A3H").
+                select(["Lai"]).
+                filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+                map(function(img){return img.toFloat().
+                                    multiply(0.1).
+                                    rename('lai').
+                                    set('system:time_start', 
+                                    img.get('system:time_start')).
+                                    set('system:time_end', 
+                                    img.get('system:time_end'))}).
+                sort('system:time_start');
+
+  var varName = "LAI"; 
+}
+
+if(do_FPAR){
+  
+  var imgColl = ee.ImageCollection("MODIS/006/MCD15A3H").
+                  select(["Fpar"]).
+                  filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+                  map(function(img){return img.toFloat().
+                      multiply(0.01).
+                      rename('fpar').
+                      set('system:time_start', img.get('system:time_start')).
+                      set('system:time_end', img.get('system:time_end'))}).
+                  sort('system:time_start');
+                  
+  var varName = "FPAR"; 
+}
+
+if(do_GPP){
+
+  var imgColl = ee.ImageCollection("MODIS/006/MOD17A2H").
+              select(["Gpp"]).
+              filterDate(yrStart + '-01-01', yrEnd + '-12-31').
+              map(function(img){return img.toFloat().
+                                  multiply(0.0001).
+                                  rename('gpp').
+                                  set('system:time_start', img.get('system:time_start')).
+                                  set('system:time_end', img.get('system:time_end'))}).
+              sort('system:time_start');
+            
+  var varName = "GPP"; 
+}
+
+
+// ------------------------------------------------------------------------- //
+
+if(calc_Avg){
+    // Calculate the annual mean    
+    var imgColl_mean = ee.ImageCollection.fromImages(
+          yrs.map(function (yr) {
+          return imgColl.filter(ee.Filter.calendarRange(yr, yr, 'year')).
+          mean().
+          set('year', yr);
+  }));
+    
+  var imgColl_mean_mb  = modtools.imgCol2multiBandImage(imgColl_mean);
+    
+  Export.image.toDrive({image: imgColl_mean_mb,
+                      description: varName + '_avg_' + yrStart + '_' + yrEnd, 
+                      folder: outFolder,
+                      crs: outCRS,
+                      scale: outSpatialRes,
+                      maxPixels: outMaxPixValue
+  });
+}
+  
+if(calc_Min){
+  // Calculate the annual minimum value    
+  var imgColl_min = ee.ImageCollection.fromImages(
+          yrs.map(function (yr) {
+            return imgColl.filter(ee.Filter.calendarRange(yr, yr, 'year')).
+            min().
+            set('year', yr);
+  }));
+    
+  var imgColl_min_mb  = modtools.imgCol2multiBandImage(imgColl_min);
+    
+  Export.image.toDrive({image: imgColl_min_mb,
+                        description: varName + '_min_' + yrStart + '_' + yrEnd, 
+                        folder: outFolder,
+                        crs: outCRS,
+                        scale: outSpatialRes,
+                        maxPixels: outMaxPixValue
+  });
+}
+  
+if(calc_Max){
+    // Calculate the annual maximum value    
+    var imgColl_max = ee.ImageCollection.fromImages(
+          yrs.map(function (yr) {
+            return imgColl.filter(ee.Filter.calendarRange(yr, yr, 'year')).
+            max().
+            set('year', yr);
+    }));
+    
+    var imgColl_max_mb  = modtools.imgCol2multiBandImage(imgColl_max);
+    
+    Export.image.toDrive({image: imgColl_max_mb,
+                        description: varName + '_max_' + yrStart + '_' + yrEnd, 
+                        folder: outFolder,
+                        crs: outCRS,
+                        scale: outSpatialRes,
+                        maxPixels: outMaxPixValue
+    });
+  }
+  
+if(calc_Std){
+    
+  // Calculate the annual std-dev value    
+  var imgColl_std = ee.ImageCollection.fromImages(
+          yrs.map(function (yr) {
+            return imgColl.filter(ee.Filter.calendarRange(yr, yr, 'year')).
+            reduce(ee.Reducer.stdDev()).
+            set('year', yr);
+    }));
+    
+  var imgColl_std_mb  = modtools.imgCol2multiBandImage(imgColl_std);
+    
+  Export.image.toDrive({image: imgColl_std_mb,
+                        description: varName + '_std_' + yrStart + '_' + yrEnd, 
+                        folder: outFolder,
+                        crs: outCRS,
+                        scale: outSpatialRes,
+                        maxPixels: outMaxPixValue
+  });
+}
+  
+if(calc_Dmx){
+
+    var timeOfMax = ee.ImageCollection.fromImages(
+          yrs.map(function (yr) {
+            return viTSdateOfMax(imgColl.
+              filter(ee.Filter.calendarRange(yr, yr, 'year'))).
+            set('year', yr);
+    }));
+    
+    var timeOfMax_mb  = modtools.imgCol2multiBandImage(timeOfMax);
+
+    Export.image.toDrive({image: timeOfMax_mb,
+                      description: varName + '_dmx_' + yrStart + '_' + yrEnd, 
+                      folder: outFolder,
+                      crs: outCRS,
+                      scale: outSpatialRes,
+                      maxPixels: outMaxPixValue
+    });
+    
+    if(calc_Spg){
+
+      var springness = timeOfMax.map(modtools.sprg);
+      var springness_mb  = modtools.imgCol2multiBandImage(springness);
+
+      Export.image.toDrive({image: springness_mb,
+                      description: varName + '_spg_' + yrStart + '_' + yrEnd, 
+                      folder: outFolder,
+                      crs: outCRS,
+                      scale: outSpatialRes,
+                      maxPixels: outMaxPixValue
+      });
+    }
+    
+    if(calc_Wnt){
+      
+      var winterness = timeOfMax.map(modtools.wint);
+      var winterness_mb  = modtools.imgCol2multiBandImage(winterness);
+
+      Export.image.toDrive({image: winterness_mb,
+                      description: varName + '_wnt_' + yrStart + '_' + yrEnd, 
+                      folder: outFolder,
+                      crs: outCRS,
+                      scale: outSpatialRes,
+                      maxPixels: outMaxPixValue
+    });
+  }
+}
+  
+
