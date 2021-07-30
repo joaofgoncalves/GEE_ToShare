@@ -1,0 +1,530 @@
+
+/* ---------------------------------------------------------------------------------------- 
+  
+   A set of ancillary functions to handle MODIS data and other generic functions
+
+  ---------------------------------------------------------------------------------------- */
+
+
+var MOD09A1_burnIndices = function(img){
+  
+  var nbr = img.expression(
+  
+    '(NIR - LSWIR) / (NIR + LSWIR)', {
+    'NIR': img.select('sur_refl_b02'),
+    'LSWIR': img.select('sur_refl_b07')
+  }).toFloat();
+
+  var csi = img.expression(
+    
+    'NIR / LSWIR', {
+    'NIR': img.select('sur_refl_b02'),
+    'LSWIR': img.select('sur_refl_b07')
+  }).toFloat();
+  
+  var mirbi = img.expression(
+    
+    '10 * LSWIR - 9.8 * SSWIR + 2',{
+    'LSWIR': img.select('sur_refl_b07').toFloat().multiply(1E-4),
+    'SSWIR': img.select('sur_refl_b06').toFloat().multiply(1E-4)
+    }).toFloat();
+    
+  return nbr.
+    addBands(csi).
+    addBands(mirbi).
+    addBands(ee.Image.constant(img.date().getRelative('day', 'year')).uint16()).
+    //addBands(ee.Image.constant(img.date().millis()).long()).
+    rename(['NBR','CSI','MIRBI','doy']).
+    set('system:index', img.get('system:index')).
+    set('system:time_start', img.get('system:time_start')).
+    set('system:time_end', img.get('system:time_end'));
+    
+    
+};
+
+var MOD13Q1_burnIndices = function(img){
+  
+  var nbr = img.expression(
+      '(NIR - LSWIR) / (NIR + LSWIR)', {
+        'NIR': img.select('sur_refl_b02'),
+        'LSWIR': img.select('sur_refl_b07')
+  }).toFloat();
+
+  var csi = img.expression(
+    
+    'NIR / LSWIR', {
+        'NIR': img.select('sur_refl_b02'),
+        'LSWIR': img.select('sur_refl_b07')
+  }).toFloat();
+
+  return nbr.
+    addBands(csi).
+    addBands(ee.Image.constant(img.date().getRelative('day', 'year')).uint16()).
+    //addBands(ee.Image.constant(img.date().millis()).long()).
+    rename(['NBR','CSI','doy']).
+    set('system:index', img.get('system:index')).
+    set('system:time_start', img.get('system:time_start')).
+    set('system:time_end', img.get('system:time_end'));
+};
+
+// Function to calculate the NBR 
+var MOD_NBRindex = function(img){
+  return img.normalizedDifference(ee.List(["sur_refl_b02", "sur_refl_b07"]));
+};
+
+
+// Map function for calculating MODIS MOD09A1 NDVI, EVI and acquisition time (milisecs after 01-01-1970)
+
+var MOD09A1_SpectralIndices = function(img){
+  
+  var ndvi = img.expression(
+      '(NIR - RED) / (NIR + RED)', {
+        'NIR': img.select('sur_refl_b02'),
+        'RED': img.select('sur_refl_b01')
+  }).toFloat();
+  
+  var evi = img.expression(
+    '(2.5 * (NIR - RED)) / (NIR + 6 * RED - 7.5 * BLUE + 1)', {
+      'NIR': img.select('sur_refl_b02').toFloat().multiply(1E-4),
+      'RED': img.select('sur_refl_b01').toFloat().multiply(1E-4),
+      'BLUE': img.select('sur_refl_b03').toFloat().multiply(1E-4)
+      
+    });
+  
+  var savi = img.expression(
+        '(1 + L) * (NIR - RED)/ (NIR + RED + L)', {
+          'NIR': img.select('sur_refl_b02').toFloat(),
+          'RED': img.select('sur_refl_b01').toFloat(),
+           'L': 0.5
+  });
+  
+  var msavi = img.expression(
+  '(2 * NIR + 1 - sqrt(pow((2 * NIR + 1), 2) - 8 * (NIR - RED)) ) / 2', {
+    'NIR': img.select('sur_refl_b02').toFloat(), 
+    'RED': img.select('sur_refl_b01').toFloat()
+  });
+  
+  // Uses MOD09A1 band 6 (1628 - 1652nm)
+  var ndwi = img.expression(
+      '(NIR - SWIR) / (NIR + SWIR)', {
+        'NIR': img.select('sur_refl_b02'),
+        'SWIR': img.select('sur_refl_b06')
+  }).toFloat();
+  
+  return ndvi.
+    addBands(evi).
+    addBands(savi).
+    addBands(msavi).
+    addBands(ndwi).
+    addBands(ee.Image.constant(img.date().getRelative('day', 'year')).uint16()).
+    //addBands(ee.Image.constant(img.date().millis()).long()).
+    rename(['ndvi','evi','savi','msavi','ndwi','doy']).
+    set('system:index', img.get('system:index')).
+    set('system:time_start', img.get('system:time_start')).
+    set('system:time_end', img.get('system:time_end'));
+};
+
+
+// Map function used to calculate TCT transform for brightness, greenness and wetness components 
+ 
+var MOD09A1_TCT = function(img){
+  
+  var bri = img.expression(
+    '(0.4395 * b1_Red) + (0.5945 * b2_NIR) + (0.2460 * b3_Blue) + (0.3918 * b4_Green) + (0.3506 * b5_SWIR) + (0.2136 * b6_SWIR) + (0.2678 * b7_SWIR)',
+    {
+      'b1_Red': img.select('sur_refl_b01').toDouble().multiply(1E-4),
+      'b2_NIR': img.select('sur_refl_b02').toDouble().multiply(1E-4),
+      'b3_Blue': img.select('sur_refl_b03').toDouble().multiply(1E-4),
+      'b4_Green': img.select('sur_refl_b04').toDouble().multiply(1E-4),
+      'b5_SWIR': img.select('sur_refl_b05').toDouble().multiply(1E-4),
+      'b6_SWIR': img.select('sur_refl_b06').toDouble().multiply(1E-4),
+      'b7_SWIR': img.select('sur_refl_b07').toDouble().multiply(1E-4)
+    }
+  );
+  
+    var grn = img.expression(
+    '(-0.4064 * b1_Red) + (0.5129 * b2_NIR) + (-0.2744 * b3_Blue) + (-0.2893 * b4_Green) + (0.4882 * b5_SWIR) + (-0.0036 * b6_SWIR) + (-0.4169 * b7_SWIR)',
+    {
+      'b1_Red': img.select('sur_refl_b01').toDouble().multiply(1E-4),
+      'b2_NIR': img.select('sur_refl_b02').toDouble().multiply(1E-4),
+      'b3_Blue': img.select('sur_refl_b03').toDouble().multiply(1E-4),
+      'b4_Green': img.select('sur_refl_b04').toDouble().multiply(1E-4),
+      'b5_SWIR': img.select('sur_refl_b05').toDouble().multiply(1E-4),
+      'b6_SWIR': img.select('sur_refl_b06').toDouble().multiply(1E-4),
+      'b7_SWIR': img.select('sur_refl_b07').toDouble().multiply(1E-4)
+    }
+  );
+  
+    var wet = img.expression(
+    '(0.1147 * b1_Red) + (0.2489 * b2_NIR) + (0.2408 * b3_Blue) + (0.3132 * b4_Green) + (-0.3122 * b5_SWIR) + (-0.6416 * b6_SWIR) + (-0.5087 * b7_SWIR) ',
+    {
+      'b1_Red': img.select('sur_refl_b01').toDouble().multiply(1E-4),
+      'b2_NIR': img.select('sur_refl_b02').toDouble().multiply(1E-4),
+      'b3_Blue': img.select('sur_refl_b03').toDouble().multiply(1E-4),
+      'b4_Green': img.select('sur_refl_b04').toDouble().multiply(1E-4),
+      'b5_SWIR': img.select('sur_refl_b05').toDouble().multiply(1E-4),
+      'b6_SWIR': img.select('sur_refl_b06').toDouble().multiply(1E-4),
+      'b7_SWIR': img.select('sur_refl_b07').toDouble().multiply(1E-4)
+    }
+  );
+  
+    return bri.
+    addBands(grn).
+    addBands(wet).
+    //addBands(ee.Image.constant(img.date().millis()).long()).
+    addBands(ee.Image.constant(img.date().getRelative('day', 'year')).uint16()).
+    rename(['brightness','greenness','wetness','doy']).
+    set('system:index', img.get('system:index')).
+    set('system:time_start', img.get('system:time_start')).
+    set('system:time_end', img.get('system:time_end'));
+  
+};
+
+
+// Add a new band with DOY for each image in a ImageCollection object
+
+var addDOYband = function(imgCol){
+  var res = imgCol.map(function(img){
+    
+    var doy = img.date().getRelative('day', 'year');
+    return img.addBands(ee.Image.constant(doy).uint16().rename('doy'));
+    //return img.addBands(ee.Image.constant(ee.Number(img.date().format('D'))));
+  });
+  return res;
+};
+
+
+
+
+// Calculate the time/date of the maximum value
+//
+// 2018-06-07 - Changed to work with DOY (not miliseconds)
+
+var MOD09A1_viTSdateOfMax = function(modTS, ind){
+  
+  if(ind === undefined){ind = 'evi'}
+  
+  // calc VI and add time band to the image collection
+  var imgCol = modTS.map(MOD09A1_SpectralIndices).select([ind, 'doy']);
+  
+  // Turn image collection into an array
+  var imgArray = imgCol.toArray();
+  
+  // sort imgArray by the first band, keeping other bands
+  var axes = { 
+    image: 0, // Time axis
+    band: 1   // Band axis
+  };
+  
+  var sort = imgArray.arraySlice(axes.band, 0, 1);  // select bands from index 0 to 1 (selected VI)
+  var sorted = imgArray.arraySort(sort);
+  
+  // extract the last image with the max value and the date 
+  var len = sorted.arrayLength(axes.image);
+  var values = sorted.arraySlice(axes.image, len.subtract(1), len);
+
+  // convert back to an image  
+  return values.arrayProject([axes.band]).arrayFlatten([[ind, 'doy']]);
+};
+
+
+// Calculate time series anomalies with or without a pre-specified reference period
+
+var calcTSanomalies = function(modTS, refTS, stat){
+  
+  if(stat === undefined){stat = 'mean'}
+  
+  if(refTS === undefined){
+    if(stat=='mean'){
+      return modTS.map(function(image){return image.subtract(modTS.mean())});
+    }else if('median'){
+      return modTS.map(function(image){return image.subtract(modTS.median())});
+    }else{
+      return 'stat value is not acceptable!';
+    }
+  }else{
+    if(stat=='mean'){
+      return modTS.map(function(image){return image.subtract(refTS.mean())});
+    }else if('median'){
+      return modTS.map(function(image){return image.subtract(refTS.median())});
+    }else{
+      return 'stat value is not acceptable!';
+    }
+  }
+};
+
+
+// Calculate a moving average with window-size defined in +/- days (extracted from system:time_start)
+// Solution by Nick Clinton: https://gis.stackexchange.com/questions/250426/moving-averages-and-seasonality-filters/250552
+
+var movingAverageSmooth = function(imgCol, nDays, fun){
+    
+  if(nDays === undefined){nDays = 17}
+  if(fun === undefined){fun = 'mean'}    
+      
+  var join = ee.Join.saveAll({
+    matchesKey: 'images'
+  });
+  
+  // Time between consecutive images in miliseconds
+  var diffFilter = ee.Filter.maxDifference({
+    difference: 1000 * 60 * 60 * 24 * nDays,
+    leftField: 'system:time_start', 
+    rightField: 'system:time_start'
+  });
+  
+  // Define join conditions
+  var threeNeighborJoin = join.apply({
+    primary: imgCol, 
+    secondary: imgCol, 
+    condition: diffFilter
+  });
+  
+  // Add the new bands with mw averaged values
+  if(fun == 'mean'){
+    return ee.ImageCollection(threeNeighborJoin.map(function(image) {
+      var imgCol = ee.ImageCollection.fromImages(image.get('images'));
+      return ee.Image(image).addBands(imgCol.mean());
+    }));
+  }else if(fun == 'median'){
+    return  ee.ImageCollection(threeNeighborJoin.map(function(image) {
+      var imgCol = ee.ImageCollection.fromImages(image.get('images'));
+      return ee.Image(image).addBands(imgCol.median());
+    }));   
+  }else{
+    return null;
+  }
+  
+};
+
+var MDC43A3_AvgAlbedo = function(img){
+  
+   var avgAlbedo = img.expression(
+    '(bsa1 + bsa2 + bsa3 + wsa1 + wsa2 + wsa3) / 6',
+    {
+      'bsa1': img.select('Albedo_BSA_vis').toDouble().multiply(0.001),
+      'bsa2': img.select('Albedo_BSA_nir').toDouble().multiply(0.001),
+      'bsa3': img.select('Albedo_BSA_shortwave').toDouble().multiply(0.001),
+      'wsa1': img.select('Albedo_WSA_vis').toDouble().multiply(0.001),
+      'wsa2': img.select('Albedo_WSA_nir').toDouble().multiply(0.001),
+      'wsa3': img.select('Albedo_WSA_shortwave').toDouble().multiply(0.001),
+    }
+  );
+  
+  return avgAlbedo.
+    rename(['avg_albedo']).
+    set('system:index', img.get('system:index')).
+    set('system:time_start', img.get('system:time_start')).
+    set('system:time_end', img.get('system:time_end'));
+};
+
+
+// Extract data from an image collection using a single point (retrieves a list) 
+
+var extractDataByPoint = function(img, point){
+
+  // Creates function to use in iterate parser
+  var make_getPointValue = function(point){
+    
+    return function(img, list){
+              
+              var pointToUse = point;
+              
+              var val =  img.reduceRegion({
+                          reducer: ee.Reducer.first(),
+                          geometry: pointToUse
+                });
+    
+              return ee.List(list).add(val.values());
+          };
+  };
+  
+  var getPointValue = make_getPointValue(point);
+  var first = ee.List([]);
+  return ee.Array(img.iterate(getPointValue, first));
+};
+
+
+/* Converts an image collection into a multiband image
+/
+/ -- PARAMS --
+/ {imgCol} An image collection to transfrom
+/ {whichBands} An ee.List object that allows to select bands
+/
+/ -- NOTES --
+/ Based on code from user fitoprincipe -> https://earthengine.googlesource.com/users/fitoprincipe/geetools
+/ 
+/ -- EXAMPLE --
+/ var modisEVI = imgCol2multiBandImage(modisTS, ee.List(['EVI', 'NDVI']));
+/ print(modisEVI)
+/
+*/
+
+var imgCol2multiBandImage = function(imgCol, whichBands) {
+  
+  if(whichBands === undefined){
+    var imglist = ee.List(imgCol.toList(imgCol.size()));
+    var nb = 1;
+  }else{
+    var imglist = ee.List(imgCol.select(whichBands).toList(imgCol.size()));
+    var nb = whichBands.size();
+  }
+  
+  var final = ee.Image(imglist.iterate(function(img, ini){
+    ini = ee.Image(ini);
+    return ini.addBands(img);
+  }, ee.Image(0)));
+  
+  return final.slice(1, imglist.size().multiply(nb).add(1));
+};
+
+
+var calculateAnnualIQR = function(img, yrStart, yrEnd){
+  
+  var yrs = ee.List.sequence(yrStart, yrEnd);
+  
+  var imgCol = ee.ImageCollection.fromImages(
+        yrs.map(function (yr){
+        return img.filter(ee.Filter.calendarRange(yr, yr, 'year')).
+        reduce(ee.Reducer.percentile(ee.List([95]))).
+        rename('Q75').
+        set('year', yr);
+  })).combine( // combine bands (q75, q25) from both collections //
+  ee.ImageCollection.fromImages(
+        yrs.map(function (yr){
+        return img.filter(ee.Filter.calendarRange(yr, yr, 'year')).
+        reduce(ee.Reducer.percentile(ee.List([5]))).
+        rename('Q25').
+        set('year', yr);
+  })));
+
+  var imgOut = imgCol.map(function(img){
+    return img.expression('Q75 - Q25', {
+      'Q75': img.select('Q75'),
+      'Q25': img.select('Q25')
+    }).
+    rename("IQR").
+    set('year', img.get('year')); // set aggregation year
+  });
+  
+    return imgOut;
+};
+
+var viTSdateOfMax = function(imgCol){
+  imgCol = modtools.addDOYband(imgCol);
+  // Turn image collection into an array
+  var imgArray = imgCol.toArray();
+  // sort imgArray by the first band, keeping other bands
+  var axes = { 
+    image: 0, // Time axis
+    band: 1   // Band axis
+  };
+  var sort = imgArray.arraySlice(axes.band, 0, 1);  // select bands from index 0 to 1 (selected VI)
+  var sorted = imgArray.arraySort(sort);
+  // extract the last image with the max value and the date 
+  var len = sorted.arrayLength(axes.image);
+  var values = sorted.arraySlice(axes.image, len.subtract(1), len);
+  // convert back to an image  
+  var maxval = values.
+                arrayProject([axes.band]).
+                arrayFlatten([["maxvalue", 'doy']]);
+  return(maxval.select(1));
+};
+
+var sprg = function(ts){
+  var spg = ((ts.toFloat().
+                  multiply(2).
+                  multiply(Math.PI)).
+                  divide(365)).
+                  sin();
+  return(spg);
+};
+
+var wint = function(ts){
+  var wnt = ((ts.toFloat().
+                  multiply(2).
+                  multiply(Math.PI)).
+                  divide(365)).
+                  cos();
+  return(wnt);
+};
+
+
+var calcMonthlyAverages = function(imCol, yrStart, yrEnd){
+  
+  var months = ee.List.sequence(1, 12);
+  var years = ee.List.sequence(yrStart, yrEnd);
+  
+  var DT = ee.ImageCollection.fromImages(
+    years.map(function(y) {
+      return months.map(function (m) {
+        return imCol
+          .filter(ee.Filter.calendarRange(y, y, 'year'))
+          .filter(ee.Filter.calendarRange(m, m, 'month'))
+          .mean()
+          .set('month', m)
+          .set('year', y)
+          .set('system:time_start', ee.Date.fromYMD(y,m,1));
+    });
+  }).flatten());
+  return(DT);
+};
+
+// helper function to extract the QA bits
+var getQABits = function(image, start, end, newName) {
+ // Compute the bits we need to extract.
+ var pattern = 0;
+ for (var i = start; i <= end; i++) {
+ pattern += Math.pow(2, i);
+ }
+ // Return a single band image of the extracted QA bits, giving the band
+ // a new name.
+ return image.select([0], [newName])
+ .bitwiseAnd(pattern)
+ .rightShift(start);
+};
+
+// Cloud masking MODIS MOD09A1
+// A function to mask out cloudy pixels.
+var maskQuality = function(image) {
+ // Select the QA band.
+ var QA = image.select('StateQA');
+ // Get the internal_cloud_algorithm_flag bit.
+ var internalQuality = getQABits(QA,8, 13, 'internal_quality_flag');
+ // Return an image masking out cloudy areas.
+ return image.updateMask(internalQuality.eq(0));
+};
+
+
+// ---------------------------------------------------------------------------------- //
+// Make exports
+// ---------------------------------------------------------------------------------- //
+
+
+// MOD13Q1 ------------------------------------------------
+//exports.MOD13Q1_SpectralIndices = MOD13Q1_SpectralIndices;
+exports.MOD13Q1_burnIndices = MOD13Q1_burnIndices;
+exports.MOD_NBRindex = MOD_NBRindex;
+
+// MOD09A1 ------------------------------------------------
+exports.MOD09A1_SpectralIndices = MOD09A1_SpectralIndices;
+exports.MOD09A1_TCT = MOD09A1_TCT;
+exports.MOD09A1_viTSdateOfMax = MOD09A1_viTSdateOfMax;
+exports.MOD09A1_burnIndices = MOD09A1_burnIndices;
+exports.getQABits = getQABits;
+exports.maskQuality = maskQuality;
+
+// MCD43A3 ------------------------------------------------
+exports.MDC43A3_AvgAlbedo = MDC43A3_AvgAlbedo;
+
+// General functions --------------------------------------
+exports.calcTSanomalies = calcTSanomalies;
+exports.movingAverageSmooth = movingAverageSmooth;
+exports.extractDataByPoint = extractDataByPoint;
+exports.imgCol2multiBandImage = imgCol2multiBandImage;
+exports.calculateAnnualIQR = calculateAnnualIQR;
+exports.addDOYband = addDOYband;
+exports.viTSdateOfMax = viTSdateOfMax;
+exports.wint = wint;
+exports.sprg = sprg;
+exports.calcMonthlyAverages = calcMonthlyAverages;
