@@ -1,6 +1,6 @@
 
 // Import tools
-var modtools = require('users/joaofgo/GEE_MiscTools:MODIS');
+var modtools = require('users/joaofgo/ToShare:MODIS_Lib');
 
 
 var viTSdateOfMax = function(imgCol){
