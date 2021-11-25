@@ -50,7 +50,9 @@ var fill = function(img, ini) {
   return inift.merge(ft3);
 };
 
+
 var ndvi_tb = ee.FeatureCollection(ee.List([]));
+
 var ndvi_ = ee.FeatureCollection(ndviCol.iterate(fill, ndvi_tb));
 
 //print(ndvi_);
