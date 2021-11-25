@@ -3,6 +3,8 @@ var pts = ee.FeatureCollection("users/joaofgo/pts_rocio");
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 var cloud_masks = require('users/fitoprincipe/geetools:cloud_masks');
 
+//var pts = ee.FeatureCollection("users/joaofgo/pts_rocio");
+
 
 var s2 = ee.ImageCollection("COPERNICUS/S2_SR").
   filterDate("2018-01-01", "2020-12-31").
