@@ -55,6 +55,8 @@ var ndvi_ = ee.FeatureCollection(ndviCol.iterate(fill, ndvi_tb));
 
 //print(ndvi_);
 
-Export.table.toDrive(ndvi_,  "S2_NDVI_RocioSamplePts",  
-"GEE", "S2_NDVI_RocioSamplePts");
+Export.table.toDrive(ndvi_,  
+"S2_NDVI_RocioSamplePts",  
+"GEE", 
+"S2_NDVI_RocioSamplePts");
 
