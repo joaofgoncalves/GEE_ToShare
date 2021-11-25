@@ -3,6 +3,7 @@ var pts = ee.FeatureCollection("users/joaofgo/pts_rocio");
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 var cloud_masks = require('users/fitoprincipe/geetools:cloud_masks');
 
+// Uncomment this line to access the points!!
 //var pts = ee.FeatureCollection("users/joaofgo/pts_rocio");
 
 
