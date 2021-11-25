@@ -53,7 +53,7 @@ var fill = function(img, ini) {
 var ndvi_tb = ee.FeatureCollection(ee.List([]));
 var ndvi_ = ee.FeatureCollection(ndviCol.iterate(fill, ndvi_tb));
 
-print(ndvi_);
+//print(ndvi_);
 
 Export.table.toDrive(ndvi_,  "S2_NDVI_RocioSamplePts",  
 "GEE", "S2_NDVI_RocioSamplePts");
