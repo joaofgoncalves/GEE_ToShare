@@ -1,0 +1,173 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var ptb = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-9.556292142912694, 42.22437811506446],
+          [-9.556292142912694, 36.89711716144945],
+          [-6.084612455412694, 36.89711716144945],
+          [-6.084612455412694, 42.22437811506446]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+
+
+var era5d_2015 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+   .select('total_precipitation_max')
+  .filterBounds(ptb)
+  .filterDate("2015-01-01", "2015-12-31")
+
+var era5d_2016 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+   .select('total_precipitation_max')
+  .filterBounds(ptb)
+  .filterDate("2016-01-01", "2016-12-31")
+  
+var era5d_2017 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+   .select('total_precipitation_max')
+  .filterBounds(ptb)
+  .filterDate("2017-01-01", "2017-12-31")
+  
+var era5d_2018 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+   .select('total_precipitation_max')
+  .filterBounds(ptb)
+  .filterDate("2018-01-01", "2018-12-31")
+
+var has_pp = function(img){
+  return img.gt(0).toInt16()
+}
+
+print(era5d_2015)
+
+
+// 2015
+var era5d_2015_bin = era5d_2015
+.map(has_pp)
+.sum()
+ .toInt16();
+
+var era5d_2015_total = era5d_2015
+.sum()
+ .toInt16();
+
+//2016
+var era5d_2016_bin = era5d_2016
+.map(has_pp)
+.sum()
+ .toInt16();
+
+var era5d_2016_total = era5d_2016
+.sum()
+ .toInt16();
+
+//2017
+var era5d_2017_bin = era5d_2017
+.map(has_pp)
+.sum()
+ .toInt16();
+
+var era5d_2017_total = era5d_2017
+.sum()
+ .toInt16();
+ 
+//2018
+var era5d_2018_bin = era5d_2018
+.map(has_pp)
+.sum()
+ .toInt16();
+
+var era5d_2018_total = era5d_2018
+.sum()
+ .toInt16();
+
+
+
+//print(era5d_2015_bin)
+
+// Add the layer to the map for visualization
+//Map.addLayer(era5d_2015_bin, {min: 0, max: 500, palette: ['white', 'blue']}, 'Precipitation days');
+
+// Center the map (Optional, adjust the coordinates and zoom level to your area of interest)
+//Map.setCenter(-8, 45, 7); // Longitude, Latitude, Zoom level
+
+
+////////////////////////////////////////////////////////////////////////////
+// NR DAYS WITH RAIN
+////////////////////////////////////////////////////////////////////////////
+
+
+Export.image.toDrive({
+  
+  image: era5d_2015_bin,
+  description: 'ERA5LAND_NrDaysWithRain_2015',
+  folder: 'GEE',
+  region:ptb,
+  scale: 10000
+})
+Export.image.toDrive({
+  
+  image: era5d_2016_bin,
+  description: 'ERA5LAND_NrDaysWithRain_2016',
+  folder: 'GEE',
+  region:ptb,
+  scale: 10000
+})
+Export.image.toDrive({
+  
+  image: era5d_2017_bin,
+  description: 'ERA5LAND_NrDaysWithRain_2017',
+  folder: 'GEE',
+  region:ptb,
+  scale: 10000
+})
+
+
+Export.image.toDrive({
+  
+  image: era5d_2018_bin,
+  description: 'ERA5LAND_NrDaysWithRain_2018',
+  folder: 'GEE',
+  region:ptb,
+  scale: 10000
+})
+
+
+////////////////////////////////////////////////////////////////////////////
+// TOTAL PRECIPITATION
+////////////////////////////////////////////////////////////////////////////
+
+
+Export.image.toDrive({
+  
+  image: era5d_2015_total,
+  description: 'ERA5LAND_Total_2015',
+  folder: 'GEE',
+  region:ptb,
+  scale: 10000
+})
+Export.image.toDrive({
+  
+  image: era5d_2016_total,
+  description: 'ERA5LAND_Total_2016',
+  folder: 'GEE',
+  region:ptb,
+  scale: 10000
+})
+Export.image.toDrive({
+  
+  image: era5d_2017_total,
+  description: 'ERA5LAND_Total_2017',
+  folder: 'GEE',
+  region:ptb,
+  scale: 10000
+})
+Export.image.toDrive({
+  
+  image: era5d_2018_total,
+  description: 'ERA5LAND_Total_2018',
+  folder: 'GEE',
+  region:ptb,
+  scale: 10000
+})
