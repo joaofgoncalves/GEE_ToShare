@@ -36,7 +36,7 @@ var era5d_2018 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
   .filterDate("2018-01-01", "2018-12-31");
 
 var has_pp = function(img){
-  return img.gt(0).toInt16();
+  return img.gt(0.001).toInt16();
 };
 
 var pp_to_mm = function(img){
