@@ -39,8 +39,8 @@ var has_pp = function(img){
   return img.gt(0).toInt16();
 };
 
-var pp_to_cm = function(img){
-  return img.multiply(100);
+var pp_to_mm = function(img){
+  return img.multiply(1000);
 };
 
 print(era5d_2015);
@@ -53,6 +53,7 @@ var era5d_2015_bin = era5d_2015
  .toInt16();
 
 var era5d_2015_total = era5d_2015
+.map(pp_to_mm)
 .sum()
  .toInt16();
 
@@ -63,6 +64,7 @@ var era5d_2016_bin = era5d_2016
  .toInt16();
 
 var era5d_2016_total = era5d_2016
+.map(pp_to_mm)
 .sum()
  .toInt16();
 
@@ -73,6 +75,7 @@ var era5d_2017_bin = era5d_2017
  .toInt16();
 
 var era5d_2017_total = era5d_2017
+.map(pp_to_mm)
 .sum()
  .toInt16();
  
@@ -83,6 +86,7 @@ var era5d_2018_bin = era5d_2018
  .toInt16();
 
 var era5d_2018_total = era5d_2018
+.map(pp_to_mm)
 .sum()
  .toInt16();
 
