@@ -38,27 +38,27 @@ var era5d_2018 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
 // Hourly data
   
 var era5h_2015 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
-   .select('total_precipitation')
+   .select('total_precipitation_hourly')
   .filterBounds(ptb)
   .filterDate("2015-01-01", "2015-12-31");
 
 var era5h_2016 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
-   .select('total_precipitation')
+   .select('total_precipitation_hourly')
   .filterBounds(ptb)
   .filterDate("2016-01-01", "2016-12-31");
   
 var era5h_2017 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
-   .select('total_precipitation')
+   .select('total_precipitation_hourly')
   .filterBounds(ptb)
   .filterDate("2017-01-01", "2017-12-31");
   
 var era5h_2018 = ee.ImageCollection("ECMWF/ERA5_LAND/HOURLY")
-   .select('total_precipitation')
+   .select('total_precipitation_hourly')
   .filterBounds(ptb)
   .filterDate("2018-01-01", "2018-12-31");
 
 var has_pp = function(img){
-  return img.gt(0.001).toInt16();
+  return img.multiply(1000).toInt16().gt(0).toInt16();
 };
 
 var pp_to_mm = function(img){
