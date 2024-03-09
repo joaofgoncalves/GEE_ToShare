@@ -135,7 +135,11 @@ Export.image.toDrive({
   folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
-  crs: 'EPSG:32629'
+  crs: 'EPSG:32629',
+  fileFormat: 'GeoTIFF',
+  formatOptions: {
+    noData: -9999
+  }
 });
 Export.image.toDrive({
   
@@ -144,7 +148,11 @@ Export.image.toDrive({
   folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
-  crs: 'EPSG:32629'
+  crs: 'EPSG:32629',
+  fileFormat: 'GeoTIFF',
+  formatOptions: {
+    noData: -9999
+  }
 });
 Export.image.toDrive({
   
@@ -153,7 +161,11 @@ Export.image.toDrive({
   folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
-  crs: 'EPSG:32629'
+  crs: 'EPSG:32629',
+  fileFormat: 'GeoTIFF',
+  formatOptions: {
+    noData: -9999
+  }
 });
 
 Export.image.toDrive({
@@ -163,7 +175,11 @@ Export.image.toDrive({
   folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
-  crs: 'EPSG:32629'
+  crs: 'EPSG:32629',
+  fileFormat: 'GeoTIFF',
+  formatOptions: {
+    noData: -9999
+  }
 });
 
 
@@ -179,7 +195,11 @@ Export.image.toDrive({
   folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
-  crs: 'EPSG:32629'
+  crs: 'EPSG:32629',
+  fileFormat: 'GeoTIFF',
+  formatOptions: {
+    noData: -9999
+  }
 });
 Export.image.toDrive({
   
@@ -188,7 +208,11 @@ Export.image.toDrive({
   folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
-  crs: 'EPSG:32629'
+  crs: 'EPSG:32629',
+  fileFormat: 'GeoTIFF',
+  formatOptions: {
+    noData: -9999
+  }
 });
 Export.image.toDrive({
   
@@ -197,7 +221,11 @@ Export.image.toDrive({
   folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
-  crs: 'EPSG:32629'
+  crs: 'EPSG:32629',
+  fileFormat: 'GeoTIFF',
+  formatOptions: {
+    noData: -9999
+  }
 });
 Export.image.toDrive({
   
@@ -206,5 +234,9 @@ Export.image.toDrive({
   folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
-  crs: 'EPSG:32629'
+  crs: 'EPSG:32629',
+  fileFormat: 'GeoTIFF',
+  formatOptions: {
+    noData: -9999
+  }
 });
