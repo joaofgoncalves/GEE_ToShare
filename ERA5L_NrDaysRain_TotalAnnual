@@ -72,45 +72,53 @@ print(era5d_2015);
 var era5d_2015_bin = era5d_2015
 .map(has_pp)
 .sum()
- .toInt16();
+ .toInt16()
+ .unmask(-9999);
 
 var era5_2015_total = era5h_2015
 .map(pp_to_mm)
 .sum()
- .toInt16();
+ .toInt16()
+ .unmask(-9999);
 
 //2016
 var era5d_2016_bin = era5d_2016
 .map(has_pp)
 .sum()
- .toInt16();
+ .toInt16()
+ .unmask(-9999);
 
 var era5_2016_total = era5h_2016
 .map(pp_to_mm)
 .sum()
- .toInt16();
+ .toInt16()
+ .unmask(-9999);
 
 //2017
 var era5d_2017_bin = era5d_2017
 .map(has_pp)
 .sum()
- .toInt16();
+ .toInt16()
+ .unmask(-9999);
 
 var era5_2017_total = era5h_2017
 .map(pp_to_mm)
 .sum()
- .toInt16();
+ .toInt16()
+ .unmask(-9999);
  
 //2018
 var era5d_2018_bin = era5d_2018
 .map(has_pp)
 .sum()
- .toInt16();
+ .toInt16()
+ .unmask(-9999);
 
 var era5_2018_total = era5h_2018
 .map(pp_to_mm)
 .sum()
- .toInt16();
+ .toInt16()
+ .unmask(-9999);
 
 
 
