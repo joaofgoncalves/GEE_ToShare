@@ -132,40 +132,39 @@ Export.image.toDrive({
   
   image: era5d_2015_bin,
   description: 'ERA5LAND_NrDaysWithRain_2015',
-  folder: 'GEE',
+  folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
   crs: 'EPSG:32629'
-})
+});
 Export.image.toDrive({
   
   image: era5d_2016_bin,
   description: 'ERA5LAND_NrDaysWithRain_2016',
-  folder: 'GEE',
+  folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
   crs: 'EPSG:32629'
-})
+});
 Export.image.toDrive({
   
   image: era5d_2017_bin,
   description: 'ERA5LAND_NrDaysWithRain_2017',
-  folder: 'GEE',
+  folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
   crs: 'EPSG:32629'
-})
-
+});
 
 Export.image.toDrive({
   
   image: era5d_2018_bin,
   description: 'ERA5LAND_NrDaysWithRain_2018',
-  folder: 'GEE',
+  folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
   crs: 'EPSG:32629'
-})
+});
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -177,35 +176,35 @@ Export.image.toDrive({
   
   image: era5_2015_total,
   description: 'ERA5LAND_Total_2015',
-  folder: 'GEE',
+  folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
   crs: 'EPSG:32629'
-})
+});
 Export.image.toDrive({
   
   image: era5_2016_total,
   description: 'ERA5LAND_Total_2016',
-  folder: 'GEE',
+  folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
   crs: 'EPSG:32629'
-})
+});
 Export.image.toDrive({
   
   image: era5_2017_total,
   description: 'ERA5LAND_Total_2017',
-  folder: 'GEE',
+  folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
   crs: 'EPSG:32629'
-})
+});
 Export.image.toDrive({
   
   image: era5_2018_total,
   description: 'ERA5LAND_Total_2018',
-  folder: 'GEE',
+  folder: 'GEE_Outputs',
   region:ptb,
   scale: 10000,
   crs: 'EPSG:32629'
-})
+});
