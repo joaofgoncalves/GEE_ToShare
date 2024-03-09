@@ -35,6 +35,28 @@ var era5d_2018 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
   .filterBounds(ptb)
   .filterDate("2018-01-01", "2018-12-31");
 
+// Hourly data
+  
+var era5h_2015 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+   .select('total_precipitation')
+  .filterBounds(ptb)
+  .filterDate("2015-01-01", "2015-12-31");
+
+var era5h_2016 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+   .select('total_precipitation')
+  .filterBounds(ptb)
+  .filterDate("2016-01-01", "2016-12-31");
+  
+var era5h_2017 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+   .select('total_precipitation')
+  .filterBounds(ptb)
+  .filterDate("2017-01-01", "2017-12-31");
+  
+var era5h_2018 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+   .select('total_precipitation')
+  .filterBounds(ptb)
+  .filterDate("2018-01-01", "2018-12-31");
+
 var has_pp = function(img){
   return img.gt(0.001).toInt16();
 };
@@ -52,7 +74,7 @@ var era5d_2015_bin = era5d_2015
 .sum()
  .toInt16();
 
-var era5d_2015_total = era5d_2015
+var era5_2015_total = era5h_2015
 .map(pp_to_mm)
 .sum()
  .toInt16();
@@ -63,7 +85,7 @@ var era5d_2016_bin = era5d_2016
 .sum()
  .toInt16();
 
-var era5d_2016_total = era5d_2016
+var era5_2016_total = era5h_2016
 .map(pp_to_mm)
 .sum()
  .toInt16();
@@ -74,7 +96,7 @@ var era5d_2017_bin = era5d_2017
 .sum()
  .toInt16();
 
-var era5d_2017_total = era5d_2017
+var era5h_2017_total = era5h_2017
 .map(pp_to_mm)
 .sum()
  .toInt16();
@@ -85,7 +107,7 @@ var era5d_2018_bin = era5d_2018
 .sum()
  .toInt16();
 
-var era5d_2018_total = era5d_2018
+var era5_2018_total = era5h_2018
 .map(pp_to_mm)
 .sum()
  .toInt16();
@@ -112,7 +134,8 @@ Export.image.toDrive({
   description: 'ERA5LAND_NrDaysWithRain_2015',
   folder: 'GEE',
   region:ptb,
-  scale: 10000
+  scale: 10000,
+  crs: 'EPSG:32629'
 })
 Export.image.toDrive({
   
@@ -120,7 +143,8 @@ Export.image.toDrive({
   description: 'ERA5LAND_NrDaysWithRain_2016',
   folder: 'GEE',
   region:ptb,
-  scale: 10000
+  scale: 10000,
+  crs: 'EPSG:32629'
 })
 Export.image.toDrive({
   
@@ -128,7 +152,8 @@ Export.image.toDrive({
   description: 'ERA5LAND_NrDaysWithRain_2017',
   folder: 'GEE',
   region:ptb,
-  scale: 10000
+  scale: 10000,
+  crs: 'EPSG:32629'
 })
 
 
@@ -138,7 +163,8 @@ Export.image.toDrive({
   description: 'ERA5LAND_NrDaysWithRain_2018',
   folder: 'GEE',
   region:ptb,
-  scale: 10000
+  scale: 10000,
+  crs: 'EPSG:32629'
 })
 
 
@@ -149,33 +175,37 @@ Export.image.toDrive({
 
 Export.image.toDrive({
   
-  image: era5d_2015_total,
+  image: era5_2015_total,
   description: 'ERA5LAND_Total_2015',
   folder: 'GEE',
   region:ptb,
-  scale: 10000
+  scale: 10000,
+  crs: 'EPSG:32629'
 })
 Export.image.toDrive({
   
-  image: era5d_2016_total,
+  image: era5_2016_total,
   description: 'ERA5LAND_Total_2016',
   folder: 'GEE',
   region:ptb,
-  scale: 10000
+  scale: 10000,
+  crs: 'EPSG:32629'
 })
 Export.image.toDrive({
   
-  image: era5d_2017_total,
+  image: era5_2017_total,
   description: 'ERA5LAND_Total_2017',
   folder: 'GEE',
   region:ptb,
-  scale: 10000
+  scale: 10000,
+  crs: 'EPSG:32629'
 })
 Export.image.toDrive({
   
-  image: era5d_2018_total,
+  image: era5_2018_total,
   description: 'ERA5LAND_Total_2018',
   folder: 'GEE',
   region:ptb,
-  scale: 10000
+  scale: 10000,
+  crs: 'EPSG:32629'
 })
