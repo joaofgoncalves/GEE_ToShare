@@ -96,7 +96,7 @@ var era5d_2017_bin = era5d_2017
 .sum()
  .toInt16();
 
-var era5h_2017_total = era5h_2017
+var era5_2017_total = era5h_2017
 .map(pp_to_mm)
 .sum()
  .toInt16();
