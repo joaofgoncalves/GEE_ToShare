@@ -125,9 +125,9 @@ print(simplifiedCollection);
 // Export the results as a table to Google Drive.
 Export.table.toDrive({
   collection: simplifiedCollection,
-  description: 'NDCVI_NDWI_CH_mean_std' + buff_dist + 'm',
+  description: 'NDCVI_NDWI_CH_mean_std_buff' + buff_dist + 'm',
   folder: 'GEE_Outputs',
-  fileNamePrefix: 'NDVI_NDWI_CH_mean_std_d' + buff_dist + 'm',
+  fileNamePrefix: 'NDVI_NDWI_CH_mean_std_buff' + buff_dist + 'm',
   fileFormat: 'CSV'
 });
 
