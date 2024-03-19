@@ -30,7 +30,7 @@ function maskS2clouds(image) {
 
 
 // Buffer distance to be used
-var buff_dist = 100;
+var buff_dist = 10;
 
 
 
