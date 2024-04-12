@@ -1,0 +1,34 @@
+
+
+var builds_pt  = ee.FeatureCollection('projects/sat-io/open-datasets/MSBuildings/Portugal');
+
+var bbox = ee.Geometry.Rectangle({
+  coords: [
+    [-8.36, 41.22], // Southwestern corner
+    [-8.16, 41.37]  // Northeastern corner
+  ],
+  geodesic: false  // Set to false for bounding box using latitude and longitude directly
+});
+
+// Print the bounding box to ensure it's correct
+print('Bounding Box for Lousada:', bbox);
+
+var builds_lousada = builds_pt
+.filterBounds(bbox);
+
+// You can also visualize the bounding box on the map
+Map.centerObject(bbox);
+Map.addLayer(bbox, {color: 'red'}, 'Lousada Bounding Box');
+Map.addLayer(builds_lousada, {color: 'blue'}, 'Lousada Buildings');
+
+
+// Export the buildings data to Google Drive
+Export.table.toDrive({
+  collection: builds_lousada,
+  description: 'Lousada_Buildings',
+  folder: 'GEE_Outputs',
+  fileFormat: 'SHP'  // Export format, can choose other formats like CSV, KML, KMZ, GeoJSON, etc.
+});
+
+
+
