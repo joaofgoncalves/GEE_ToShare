@@ -1,0 +1,52 @@
+var cloud_masks = require('users/fitoprincipe/geetools:cloud_masks');
+
+var bbox = ee.Geometry.Polygon([[
+  [-9.59969546814, 42.20058580090],
+  [-9.55585216180, 36.92056016040],
+  [-6.31411752273, 36.89149009860],
+  [-6.10259922138, 42.16554977760]]
+  ]);
+
+// Uncomment this line to access the points!!
+//var pts = ee.FeatureCollection("users/joaofgo/pts_rocio");
+
+
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR").
+  filterDate("2020-01-01", "2020-12-31").
+  filterBounds(bbox);
+
+
+// Import the function to mask clouds and rename it
+var cloudMask = cloud_masks.sentinel2();
+
+// Create the masked cloud image collection
+var s2_masked = s2.map(function(img) {return(cloudMask(img))});
+
+print(s2_masked);
+
+
+// Based on the masked dataset calculate NDVI for each image 
+var ndviCol = s2_masked.map(
+  function(img){
+    var ndvi = img.normalizedDifference(['B8', 'B4'])
+              .rename(['NDVI'])
+              .set('system:index', img.get('system:index'))
+              .set('system:time_start', img.get('system:time_start'))
+              .set('system:time_end', img.get('system:time_end'));
+    return(ndvi);
+});
+
+var ndvi_med = ndviCol
+.median()
+.multiply(10000)
+.toInt16();
+
+
+Export.image.toDrive({image:       ndvi_med, 
+                        description: "ndvi_median_2020_pt",
+                        folder:      'GEE_Outputs',
+                        region:      bbox,
+                        scale:       20,
+                        crs:         'EPSG:32629',
+                        maxPixels:   1E12});
+                        
