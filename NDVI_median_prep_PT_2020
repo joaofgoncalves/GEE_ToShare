@@ -7,13 +7,11 @@ var bbox = ee.Geometry.Polygon([[
   [-6.10259922138, 42.16554977760]]
   ]);
 
-// Uncomment this line to access the points!!
-//var pts = ee.FeatureCollection("users/joaofgo/pts_rocio");
 
-
-var s2 = ee.ImageCollection("COPERNICUS/S2_SR").
-  filterDate("2020-01-01", "2020-12-31").
-  filterBounds(bbox);
+var s2 = ee.ImageCollection("COPERNICUS/S2_SR")
+  .filterDate("2020-01-01", "2020-12-31")
+  .filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 35))
+  .filterBounds(bbox);
 
 
 // Import the function to mask clouds and rename it
@@ -22,7 +20,7 @@ var cloudMask = cloud_masks.sentinel2();
 // Create the masked cloud image collection
 var s2_masked = s2.map(function(img) {return(cloudMask(img))});
 
-print(s2_masked);
+//print(s2_masked);
 
 
 // Based on the masked dataset calculate NDVI for each image 
@@ -41,6 +39,20 @@ var ndvi_med = ndviCol
 .multiply(10000)
 .toInt16();
 
+var ndvi_p10 = ndviCol
+.reduce(ee.Reducer.percentile([10]))
+.multiply(10000)
+.toInt16();
+
+var ndvi_p90 = ndviCol
+.reduce(ee.Reducer.percentile([90]))
+.multiply(10000)
+.toInt16();
+
+var ndvi_amp = ndvi_p90.subtract(ndvi_p10);
+
+
+print(ndvi_med)
 
 Export.image.toDrive({image:       ndvi_med, 
                         description: "ndvi_median_2020_pt",
@@ -49,4 +61,30 @@ Export.image.toDrive({image:       ndvi_med,
                         scale:       20,
                         crs:         'EPSG:32629',
                         maxPixels:   1E12});
+                        
+Export.image.toDrive({image:       ndvi_p10, 
+                        description: "ndvi_p10_2020_pt",
+                        folder:      'GEE_Outputs',
+                        region:      bbox,
+                        scale:       20,
+                        crs:         'EPSG:32629',
+                        maxPixels:   1E12});
+                        
+Export.image.toDrive({image:       ndvi_p90, 
+                        description: "ndvi_p90_2020_pt",
+                        folder:      'GEE_Outputs',
+                        region:      bbox,
+                        scale:       20,
+                        crs:         'EPSG:32629',
+                        maxPixels:   1E12});
+                        
+Export.image.toDrive({image:       ndvi_amp, 
+                        description: "ndvi_amp_2020_pt",
+                        folder:      'GEE_Outputs',
+                        region:      bbox,
+                        scale:       20,
+                        crs:         'EPSG:32629',
+                        maxPixels:   1E12});   
+                        
+                        
                         
