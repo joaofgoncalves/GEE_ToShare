@@ -1,5 +1,5 @@
 /**** Start of imports. If edited, may not auto-convert in the playground. ****/
-var table = ee.FeatureCollection("projects/midyear-byway-378403/assets/PPRSA_buffer_50km");
+var pprsa_buff = ee.FeatureCollection("projects/midyear-byway-378403/assets/PPRSA_buffer_50km");
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 
 var canopy_height = ee.Image("users/nlang/ETH_GlobalCanopyHeight_2020_10m_v1");
