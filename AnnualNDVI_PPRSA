@@ -3,7 +3,7 @@ var pprsa_buff = ee.FeatureCollection("projects/midyear-byway-378403/assets/PPRS
 /***** End of imports. If edited, may not auto-convert in the playground. *****/
 
 // Load Sentinel-2 L2A imagery for the year 2020
-var sentinel2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+var sentinel2 = ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
   .filterDate('2020-01-01', '2020-12-31')
   .filterBounds(pprsa_buff)
   .map(maskS2clouds)
