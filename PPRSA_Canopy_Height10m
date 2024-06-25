@@ -6,7 +6,7 @@ var canopy_height = ee.Image("users/nlang/ETH_GlobalCanopyHeight_2020_10m_v1");
 
 // Clip the result to the region of interest
 var clipped_CH = canopy_height
-  .filterBounds(pprsa_buff)
+  //.filterBounds(pprsa_buff)
   .clip(pprsa_buff)
   .multiply(1000)
   .toInt16();
