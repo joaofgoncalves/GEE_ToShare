@@ -53,6 +53,7 @@ Export.image.toDrive({
   folder: 'GEE_Outputs',
   scale: 10, // Sentinel-2 spatial resolution
   region: pprsa_buff,
-  maxPixels: 1e9,
+  crs: 'EPSG:32629',
+  maxPixels:   1E12,
   fileFormat: 'GeoTIFF'
 });
