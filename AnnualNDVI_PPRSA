@@ -1,0 +1,58 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var pprsa_buff = ee.FeatureCollection("projects/midyear-byway-378403/assets/PPRSA_buffer_50km");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+
+function maskS2clouds(image) {
+  var qa = image.select('QA60');
+
+  // Bits 10 and 11 are clouds and cirrus, respectively.
+  var cloudBitMask = 1 << 10;
+  var cirrusBitMask = 1 << 11;
+
+  // Both flags should be set to zero, indicating clear conditions.
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
+      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+
+  return image.updateMask(mask).divide(10000);
+}
+
+// Define a function to calculate NDVI
+var calculateNDVI = function(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI');
+  return image.addBands(ndvi);
+};
+
+// Load Sentinel-2 L2A imagery for the year 2020
+var sentinel2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+  .filterDate('2020-01-01', '2020-12-31')
+  .filterBounds(pprsa_buff)
+  .map(maskS2clouds)
+  .map(calculateNDVI);
+
+// Calculate the median NDVI
+var medianNDVI = sentinel2.select('NDVI').median();
+
+// Clip the result to the region of interest
+var clippedNDVI = medianNDVI
+  .clip(pprsa_buff)
+  .multiply(10000)
+  .toInt16();
+
+// Display the result
+/*Map.centerObject(pprsa_buff, 7);
+Map.addLayer(clippedNDVI, {min: 0, max: 1, palette: ['blue', 'white', 'green']}, 'Median NDVI 2020');
+
+// Print information to the console
+print('Median NDVI:', clippedNDVI);
+*/
+
+// Export the image to Google Drive
+Export.image.toDrive({
+  image: clippedNDVI,
+  description: 'Median_NDVI_PPRSA_2020',
+  folder: 'GEE_Outputs',
+  scale: 10, // Sentinel-2 spatial resolution
+  region: pprsa_buff,
+  maxPixels: 1e9,
+  fileFormat: 'GeoTIFF'
+});
