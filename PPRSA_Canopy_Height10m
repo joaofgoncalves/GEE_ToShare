@@ -1,0 +1,26 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var table = ee.FeatureCollection("projects/midyear-byway-378403/assets/PPRSA_buffer_50km");
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+
+var canopy_height = ee.Image("users/nlang/ETH_GlobalCanopyHeight_2020_10m_v1");
+
+// Clip the result to the region of interest
+var clipped_CH = canopy_height
+  .filterBounds(pprsa_buff)
+  .clip(pprsa_buff)
+  .multiply(1000)
+  .toInt16();
+
+// Export the image to Google Drive
+Export.image.toDrive({
+  image: clipped_CH,
+  description: 'CanopyHeight_PPRSA_2020',
+  folder: 'GEE_Outputs',
+  scale: 10, // Sentinel-2 spatial resolution
+  region: pprsa_buff,
+  crs: 'EPSG:32629',
+  maxPixels:   1E12,
+  fileFormat: 'GeoTIFF'
+});
+
+
