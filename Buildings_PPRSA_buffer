@@ -14,14 +14,14 @@ var bbox = ee.Geometry.Rectangle({
 print('Bounding Box for Buffer:', bbox);
 
 var builds_buffer = builds_pt
-.filterBounds(bbox);
+//.filterBounds(bbox);
 
 //print(builds_buffer.first())
 
 // You can also visualize the bounding box on the map
-Map.centerObject(bbox);
-Map.addLayer(bbox, {color: 'red'}, 'Buffer Bounding Box');
-Map.addLayer(builds_buffer, {color: 'blue'}, 'Buffer Buildings');
+//Map.centerObject(bbox);
+//Map.addLayer(bbox, {color: 'red'}, 'Buffer Bounding Box');
+//Map.addLayer(builds_buffer, {color: 'blue'}, 'Buffer Buildings');
 
 
 var polygons = builds_buffer
@@ -36,8 +36,8 @@ var polygonsOnly = ee.FeatureCollection(polygons);
 // Export the buildings data to Google Drive
 Export.table.toDrive({
   collection: polygonsOnly, //builds_buffer,
-  description: 'Buffer_Buildings',
-  folder: 'GEE_Outputs',
+  description: 'MSBuildingsPT_v1',
+  folder: 'GEE_OutputData',
   fileFormat: 'SHP'  // Export format, can choose other formats like CSV, KML, KMZ, GeoJSON, etc.
 });
 
