@@ -24,7 +24,10 @@ function maskS2clouds(image) {
     .set('system:time_end', image.get('system:time_end'));
 }
 
-var buff_dist = 10;
+
+var buff_dist = 20;
+//var buff_dist = 0.00025;
+
 
 // Compute NDVI, NDWI, and TCT Brightness
 var processedS2 = S2.map(function(image) {
@@ -49,7 +52,8 @@ var processedS2 = S2.map(function(image) {
 var composite_2023 = processedS2.select(['NDVI', 'NDWI', 'TCT_Brightness']).median();
 
 var bufferedPoints = pts.map(function(feature) {
-  return feature.transform("EPSG:32629").buffer(ee.Number(buff_dist));
+  //return feature.transform("EPSG:4326").buffer(ee.Number(buff_dist));
+  return feature.buffer(ee.Number(buff_dist));
 });
 
 var reducer = ee.Reducer.mean().combine({
