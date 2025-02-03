@@ -1,139 +1,94 @@
 
+
 var pts = ee.FeatureCollection("projects/midyear-byway-378403/assets/bmc_points");
 
 var canopy_height = ee.Image("users/nlang/ETH_GlobalCanopyHeight_2020_10m_v1");
-//var standard_deviation = ee.Image("users/nlang/ETH_GlobalCanopyHeightSD_2020_10m_v1");
 
-// Add and select the target product from the image collection.
-var S2 = ee.ImageCollection('COPERNICUS/S2_SR'). // Sentinel 2 Nivel 1C
-                               filter(ee.Filter.calendarRange(2023,2023,'year')). // Selected only complete years
-                               filterMetadata ('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', 25).
-                               map(maskS2clouds) // Mask clouds and cirrus pixels
-                               ;
-                               
+// Sentinel-2 Image Collection
+var S2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+  //.filter(ee.Filter.calendarRange(2023, 2023, 'year'))
+  .filterDate('2023-09-03', '2024-09-04')
+  .filterMetadata('CLOUDY_PIXEL_PERCENTAGE', 'Less_Than', 25)
+  .map(maskS2clouds);
+
 function maskS2clouds(image) {
   var qa = image.select('QA60');
-
-  // Bits 10 and 11 are clouds and cirrus, respectively.
   var cloudBitMask = 1 << 10;
   var cirrusBitMask = 1 << 11;
-
-  // Both flags should be set to zero, indicating clear conditions.
-  var mask = qa.bitwiseAnd(cloudBitMask).eq(0)
-      .and(qa.bitwiseAnd(cirrusBitMask).eq(0));
-
-  return image.updateMask(mask).toFloat().divide(10000).
-    set('system:index', image.get('system:index')).
-    set('system:time_start', image.get('system:time_start')).
-    set('system:time_end', image.get('system:time_end'));
+  var mask = qa.bitwiseAnd(cloudBitMask).eq(0).and(qa.bitwiseAnd(cirrusBitMask).eq(0));
+  return image.updateMask(mask).toFloat().divide(10000)
+    .set('system:index', image.get('system:index'))
+    .set('system:time_start', image.get('system:time_start'))
+    .set('system:time_end', image.get('system:time_end'));
 }
 
-
-// Buffer distance to be used
 var buff_dist = 10;
 
-
-
-var ndvi_2023_med = S2
-                    .map(function(image) {
+// Compute NDVI, NDWI, and TCT Brightness
+var processedS2 = S2.map(function(image) {
   var ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI');
-  return image.addBands(ndvi);
-})
-.map(function(image) {
-  var ndvi = image.normalizedDifference(['B8', 'B12']).rename('NDWI');
-  return image.addBands(ndvi);
-})
-.select(['NDVI','NDWI'])
-                    .median();
-
-// Apply a buffer to each point.
-var bufferedPoints = pts.map(function(feature) {
-  return feature.transform("EPSG:32629").buffer(ee.Number(buff_dist)); 
+  var ndwi = image.normalizedDifference(['B8', 'B12']).rename('NDWI');
+  var tct_brightness = image.expression(
+    // Sentinel-2 6-bands coeffs from Shi and Xu, 2019
+    '(0.3510 * B2) + (0.3813 * B3) + (0.3437 * B4) + (0.7196 * B8) + (0.2396 * B11) + (0.1949 * B12)',
+    {
+      'B2': image.select('B2'), // Blue
+      'B3': image.select('B3'), // Green 
+      'B4': image.select('B4'), // Red
+      'B8': image.select('B8'), // NIR
+      'B11': image.select('B11'), // SWIR-1
+      'B12': image.select('B12')  // SWIR-2
+    }
+  ).rename('TCT_Brightness');
+  return image.addBands(ndvi).addBands(ndwi).addBands(tct_brightness);
 });
 
-print(bufferedPoints)
+// Compute median values
+var composite_2023 = processedS2.select(['NDVI', 'NDWI', 'TCT_Brightness']).median();
 
+var bufferedPoints = pts.map(function(feature) {
+  return feature.transform("EPSG:32629").buffer(ee.Number(buff_dist));
+});
 
 var reducer = ee.Reducer.mean().combine({
   reducer2: ee.Reducer.stdDev(),
   sharedInputs: true
 });
 
-var NDVI_NDWI_avg_std = ndvi_2023_med.reduceRegions({
+var ndvi_ndwi_tct_stats = composite_2023.reduceRegions({
   collection: bufferedPoints,
   reducer: reducer,
-  scale: 10,
-  crs: 'EPSG:32629',
+  scale: 20,
+  crs: 'EPSG:4326',
 });
 
 var CH_avg_std = canopy_height.reduceRegions({
   collection: bufferedPoints,
   reducer: reducer,
-  scale: 10,
-  crs: 'EPSG:32629',
-})
-
-// Function to rename a property within a feature
-var renameProperty = function(feature) {
-  // Copy the value of 'mean' to a new property 'CH_mean'
-  var newFeature = feature
-    .set('CH_mean', feature.get('mean'))
-    .set('CH_stdDev', feature.get('stdDev'));
-  return newFeature;
-};
-
-CH_avg_std = CH_avg_std.map(renameProperty)
-
-//print(NDVI_NDWI_avg_std)
-print(CH_avg_std)
-
-
-// Create an inner join instance.
-var innerJoin = ee.Join.inner();
-
-// Specify the condition for the join.
-var filter = ee.Filter.equals({
-  leftField: 'serial_num',
-  rightField: 'serial_num'
+  scale: 20,
+  crs: 'EPSG:4326',
+}).map(function(feature) {
+  return feature.set('CH_mean', feature.get('mean')).set('CH_stdDev', feature.get('stdDev'));
 });
 
-// Apply the join.
-var joinedFeatCol = innerJoin
-              .apply(NDVI_NDWI_avg_std, CH_avg_std, filter);
+// Inner join
+var innerJoin = ee.Join.inner();
+var filter = ee.Filter.equals({leftField: 'serial_num', rightField: 'serial_num'});
+var joinedFeatCol = innerJoin.apply(ndvi_ndwi_tct_stats, CH_avg_std, filter);
 
-// Simplify the joined feature collection.
 var simplifiedCollection = joinedFeatCol.map(function(feature) {
-  // Extract the original features.
   var primaryFeature = ee.Feature(feature.get('primary'));
   var secondaryFeature = ee.Feature(feature.get('secondary'));
-  
-  var mergedProperties = primaryFeature
-  .toDictionary()
-  .combine(secondaryFeature.toDictionary());
-  
-  // Return a new feature with merged properties and the geometry from the primary feature.
-  return ee.Feature(primaryFeature.geometry(), mergedProperties);
-}).map(function(feature) {
-  // Create a new feature with null geometry and the same properties as the original feature
-  return ee.Feature(null, feature.toDictionary());
+  var mergedProperties = primaryFeature.toDictionary().combine(secondaryFeature.toDictionary());
+  return ee.Feature(null, mergedProperties);
 });
 
-// Print the simplified collection to check the result.
 print(simplifiedCollection);
 
-
-// Export the results as a table to Google Drive.
 Export.table.toDrive({
   collection: simplifiedCollection,
-  description: 'NDCVI_NDWI_CH_mean_std_buff' + buff_dist + 'm',
+  description: 'NDVI_NDWI_TCT_CH_mean_std_buff' + buff_dist + 'm',
   folder: 'GEE_Outputs',
-  fileNamePrefix: 'NDVI_NDWI_CH_mean_std_buff' + buff_dist + 'm',
+  fileNamePrefix: 'NDVI_NDWI_TCT_CH_mean_std_buff' + buff_dist + 'm',
   fileFormat: 'CSV'
 });
-
-
-
-
-
-
-
