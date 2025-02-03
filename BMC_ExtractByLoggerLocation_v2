@@ -2,6 +2,8 @@
 
 var pts = ee.FeatureCollection("projects/midyear-byway-378403/assets/bmc_points");
 
+print(pts);
+
 var canopy_height = ee.Image("users/nlang/ETH_GlobalCanopyHeight_2020_10m_v1");
 
 // Sentinel-2 Image Collection
@@ -73,7 +75,7 @@ var CH_avg_std = canopy_height.reduceRegions({
 
 // Inner join
 var innerJoin = ee.Join.inner();
-var filter = ee.Filter.equals({leftField: 'serial_num', rightField: 'serial_num'});
+var filter = ee.Filter.equals({leftField: 'logger_id_', rightField: 'logger_id_'});
 var joinedFeatCol = innerJoin.apply(ndvi_ndwi_tct_stats, CH_avg_std, filter);
 
 var simplifiedCollection = joinedFeatCol.map(function(feature) {
