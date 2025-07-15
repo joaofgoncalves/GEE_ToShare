@@ -49,7 +49,7 @@ var maskL8SR = function(image) {
            // It's common to scale SR bands by 0.0000275 and subtract 0.2,
            // but leave scaling to the user if desired.
            .copyProperties(image, ['system:time_start']);
-}
+};
 
 function renameL8Bands(image) {
   var inputBands  = [
@@ -72,7 +72,9 @@ function renameL8Bands(image) {
     'SWIR2'
   ];
   
-  return image.select(inputBands, outputBands);
+  return image
+    .select(inputBands, outputBands)
+    .copyProperties(image, ['system:time_start']);
 }
 
 // Emissivity scaling and performs LST calculation
@@ -161,8 +163,8 @@ var lt8_tctb = function (image) {
       //.multiply(10000)
       //.toInt16();
       
-      var image_idx = image.addBands([Brightness]);
-      return Brightness;
+      var image_tctb = image.addBands([Brightness]);
+      return image_tctb;
 };
 
 // Calculate TCT wetness for Landsat 8
@@ -183,8 +185,8 @@ var lt8_tctg = function (image) {
       //.multiply(10000)
       //.toInt16();
       
-      var image_idx = image.addBands([Greenness]);
-      return Greenness;
+      var image_tctg = image.addBands([Greenness]);
+      return image_tctg;
 };
 
 // Calculate TCT wetness for Landsat 8
@@ -205,8 +207,8 @@ var lt8_tctw = function (image) {
       //.multiply(10000)
       //.toInt16();
       
-      var image_idx = image.addBands([Wetness]);
-      return Wetness;
+      var image_tctw = image.addBands([Wetness]);
+      return image_tctw;
 };
 
 // Convert an ImageCollection into an Image keeping the dates
@@ -402,6 +404,64 @@ if(verbose){
   print(tctb_mb_img);
   print(tctb_md);
 }
+
+
+//____________________________________________
+//
+// TASSELED CAP TRANSFORM - GREENNESS (TCTG)
+//____________________________________________
+
+
+var tctg = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+  .filterDate(date_start, date_end)
+  .filterBounds(bbox)
+  .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
+  .map(maskL8SR)           // Mask clouds, shadows, saturation
+  .map(applyScaleFactors)  // Scale SR and ST_B10
+  .map(renameL8Bands)
+  .map(lt8_tctg)            // Scale emissivity and compute TCTG
+  .select("TCTG");
+  
+var tctg_md = tctg
+  .median();
+
+var tctg_mb_img = collectionToMultiBand(tctg);
+
+
+if(export_to_drive){
+  
+  // --- Export the median TCTG (single-band) ---
+  Export.image.toDrive({
+    image:       tctg_md,
+    description: 'TCTG_median_' + convert_date(date_start) + '_' + convert_date(date_end),
+    folder:      output_gdrive_folder,   
+    fileNamePrefix: 'TCTG_median_' + convert_date(date_start) + '_' + convert_date(date_end),
+    region:      bbox,                    
+    scale:       100,                     
+    crs:         coord_ref_sys,
+    maxPixels:   1e13
+  });
+  
+  // --- Export the multi-band TCTG composite ---
+  Export.image.toDrive({
+    image:       tctg_mb_img,
+    description: 'TCTG_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
+    folder:      output_gdrive_folder,
+    fileNamePrefix: 'TCTG_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
+    region:      bbox,
+    scale:       100,
+    crs:         coord_ref_sys,
+    maxPixels:   1e13
+  });
+}
+
+if(verbose){
+  print(tctg);
+  print(tctg_mb_img);
+  print(tctg_md);
+}
+
+
 
 
 
