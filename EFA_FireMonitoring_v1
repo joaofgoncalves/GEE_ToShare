@@ -1,22 +1,9 @@
 
-// ROI Target area of analysis
-// Replace this by a specific polygon or area of interest based on 
-// an asset 
- 
-var bbox = 
-    ee.Geometry.Polygon(
-        [[[-8.88248667089216, 41.78996510552295],
-          [-8.88248667089216, 41.688517307033536],
-          [-8.746530860345285, 41.688517307033536],
-          [-8.746530860345285, 41.78996510552295]]], null, false);
- 
-// ----------------------------------------------------------------
-// LANDSAT 8 / OLI
-// ----------------------------------------------------------------
 
-var dataset = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
-    .filterDate('2021-06-01', '2021-07-31')
-    .filterBounds(bbox);
+//_______________________________________________________________________
+//
+// DEFINE ANCILLARY FUNCTIONS TO HANDLE LANDSAT 8 IMAGES
+//_______________________________________________________________________
 
 
 // Applies scaling factors
@@ -27,13 +14,7 @@ var applyScaleFactors = function (image) {
               .addBands(thermalBands, null, true);
 }
 
-/**
- * Masks cloudy, cirrus, cloud-shadow, fill, and saturated pixels
- * from a Landsat 8 Collection 2 Level 2 surface reflectance image.
- *
- * @param {ee.Image} image A single Landsat 8 C2 L2 SR image.
- * @return {ee.Image} The input image masked to exclude cloudy and saturated pixels.
- */
+// Masks cloudy, cirrus, cloud-shadow, fill, and saturated pixels
 var maskL8SR = function(image) {
   // Select QA bands
   var qaPixel = image.select('QA_PIXEL');
@@ -70,8 +51,7 @@ var maskL8SR = function(image) {
            .copyProperties(image, ['system:time_start']);
 }
 
-
-// 2. Emissivity scaling + LST calculation
+// Emissivity scaling and performs LST calculation
 var addLST = function (image) {
   // BT is already scaled by applyScaleFactors
   var bt     = image.select('ST_B10').rename('BT');             // Kelvin
@@ -97,7 +77,7 @@ var addLST = function (image) {
   return image.addBands([bt, emiss, lstK, lstC]);
 }
 
-
+// Calculate all TCT components for Landsat 8
 var tasseledcap_lt8 = function (image) {
       var Brightness = image.expression(
         
@@ -139,7 +119,7 @@ var tasseledcap_lt8 = function (image) {
       return image_idx;
 };
 
-
+// Calculate TCT wetness for Landsat 8
 var lt8_tctb = function (image) {
   
       var Brightness = image.expression(
@@ -161,7 +141,7 @@ var lt8_tctb = function (image) {
       return Brightness;
 };
 
-
+// Calculate TCT wetness for Landsat 8
 var lt8_tctg = function (image) {
   
       var Greenness = image.expression(
@@ -183,7 +163,7 @@ var lt8_tctg = function (image) {
       return Greenness;
 };
 
-
+// Calculate TCT wetness for Landsat 8
 var lt8_tctw = function (image) {
 
       var Wetness = image.expression(
@@ -205,21 +185,148 @@ var lt8_tctw = function (image) {
       return Wetness;
 };
 
+// Convert an ImageCollection into an Image keeping the dates
+var collectionToMultiBand = function(col) {
+  // Make sure the collection is sorted by date
+  col = col.sort('system:time_start');
+  
+  // Convert to a list for deterministic iteration
+  var imgList = col.toList(col.size());
+  
+  // Initialize with the first image, renamed to its date
+  var first = ee.Image(imgList.get(0));
+  var firstDate = first.date().format('YYYY_MM_dd');
+  var base = first.select([0]).rename(firstDate);
+  
+  // Iterate over the rest, adding each as a new band
+  var multi = ee.Image(
+    imgList.slice(1).iterate(function(img, prev) {
+      img = ee.Image(img);
+      var date = img.date().format('YYYY_MM_dd');
+      var band = img.select([0]).rename(date);
+      return ee.Image(prev).addBands(band);
+    }, base)
+  );
+  
+  // Attach an array of the original dates (ms since epoch) as metadata
+  var dates = col.aggregate_array('system:time_start');
+  multi = multi.set('bandDates', dates);
+  
+  return multi;
+}
 
-var lst_md = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
-  .filterDate('2021-06-01', '2021-06-30')
+var convert_date = function(dateStr) {
+  if (typeof dateStr !== 'string') {
+    throw new TypeError('Expected a string');
+  }
+  // Trim whitespace and ensure exact pattern
+  var trimmed = dateStr.trim();
+  var isoPattern = /^\d{4}-\d{2}-\d{2}$/;
+  if (!isoPattern.test(trimmed)) {
+    throw new Error('Invalid date format');
+  }
+  // Replace hyphens with underscores
+  return trimmed.replace(/-/g, '');
+}
+
+//_______________________________________________________________________
+//
+// DEFINE ANALYSIS PARAMETERS
+//_______________________________________________________________________
+
+
+// ROI Target area of analysis
+//
+// !! Replace this by a specific polygon or area of interest based on 
+// an asset !!
+ 
+var bbox = 
+    ee.Geometry.Polygon(
+        [[[-8.88248667089216, 41.78996510552295],
+          [-8.88248667089216, 41.688517307033536],
+          [-8.746530860345285, 41.688517307033536],
+          [-8.746530860345285, 41.78996510552295]]], null, false);
+ 
+// Analysis dates
+var date_start = '2021-06-01';
+var date_end = '2021-07-31';
+
+var output_gdrive_folder = 'GEE_Exports';
+var coord_ref_sys = 'EPSG:4326';
+
+var verbose = true;
+var export_to_drive = true;
+
+//_______________________________________________________________________
+//
+// DATA ANALYSIS AND EXPORTATION TO GOOGLE DRIVE
+//_______________________________________________________________________
+
+
+//_____________________________________
+//
+// LAND SURFACE TEMPERATURE (LST)
+//_____________________________________
+
+/* Define the image collection by:
+ - select the adequate satellite product
+ -  apply a geographic filter based on the ROI
+ - mask cloudy pixels (clouds, cirrus, dilated clouds, etc)
+*/
+var lst = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+  .filterDate(date_start, '2021-07-31')
   .filterBounds(bbox)
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
   .map(maskL8SR)           // Mask clouds, shadows, saturation
   .map(applyScaleFactors)  // Scale SR and ST_B10
   .map(addLST)            // Scale emissivity and compute LST
+  .select("LST_C");
+  
+var lst_md = lst
   .median();
 
-//var sample = lst.first();
+var lst_mb_img = collectionToMultiBand(lst);
+
+
+if(export_to_drive){
+  
+  // --- Export the median LST (single-band) ---
+  Export.image.toDrive({
+    image:       lst_md,
+    description: 'LST median' + convert_date(date_start) + '_' + convert_date(date_end),
+    folder:      output_gdrive_folder,   
+    fileNamePrefix: 'LST_median' + convert_date(date_start) + '_' + convert_date(date_end),
+    region:      bbox,                    
+    scale:       100,                     
+    crs:         coord_ref_sys,
+    maxPixels:   1e13
+  });
+  
+  // --- Export the multi-band LST composite ---
+  Export.image.toDrive({
+    image:       lst_mb_img,
+    description: 'LST multi-band time series' + convert_date(date_start) + '_' + convert_date(date_end),
+    folder:      output_gdrive_folder,
+    fileNamePrefix: 'LST_multiband' + convert_date(date_start) + '_' + convert_date(date_end),
+    region:      bbox,
+    scale:       100,
+    crs:         coord_ref_sys,
+    maxPixels:   1e13
+  });
+}
+
+if(verbose){
+  print(lst);
+  print(lst_mb_img);
+  print(lst_md);
+}
+
+
+/*
 Map.centerObject(bbox, 8);
 Map.addLayer(
   lst_md.select('LST_C'),
   {min: 10, max: 40, palette: ['blue','green','yellow','red']},
   'LST (°C)'
 );
-
+*/
