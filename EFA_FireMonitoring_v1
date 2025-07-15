@@ -7,23 +7,36 @@
 
 /*
 
+This Google Earth Engine script automates the processing of Landsat-8 
+Collection 2/Tier 1/Level 2 surface reflectance and surface temperature data, 
+applying cloud masking, scaling, and index calculations (LST, TCT Brightness/
+Greenness/Wetness), then exports both median and multi‑band time‑series GeoTIFFs 
+to Google Drive. 
+It defines a configurable ROI, date range, coordinate system, and export options, 
+and includes robust helper functions for scaling, masking, renaming, computation, 
+and multi‑band assembly
+
 @João Gonçalves, 15/07/2025
 version 0.1.0
 
 
 INPUT
 -----
-This is the process to generate the image collection:
+Uses Landsat-8 satellite image time series L2 surface reflectance 
+(Collection 2/Tier 1)
+This is the process to generate the image collection and calculate 
+the variable of interest:
  - select the adequate satellite product
  - apply a geographic filter based on the ROI
  - mask cloudy pixels (clouds, cirrus, dilated clouds, etc)
- - apply scale factors to convert to decimal reflectance / brightness temperature
+ - apply scale factors to convert to (decimal) reflectance / brightness temperature
  - calculate the variable/index of interest
 
 OUTPUT
 ------
 For each variable (i.e., LST; TCTB, TCTG and TCTW) two images will be generated:
-  - a multi-band image with one band for each date available;
+  - a multi-band image with one band for each date available 
+  (band names include the date in YYYY_MM_dd format);
   - A median image for the entire period of the analysis
 
 The file name will contain the name of the calculated variable, the data format 
@@ -31,7 +44,9 @@ The file name will contain the name of the calculated variable, the data format
 
   - LST_median_20210601_20210731
   - TCTG_multiband_20210601_20210731
-  
+
+The output format is Float GeoTIFF
+
 */
 
 
@@ -121,6 +136,7 @@ var mask_clouds_lt8 = function(image) {
            .copyProperties(image, ['system:time_start']);
 };
 
+// Rename bands for easier implementation of TCT calculations
 var rename_bands_lt8 = function(image) {
   var inputBands  = [
     'SR_B1',  // Coastal aerosol (ultra blue)
@@ -147,7 +163,8 @@ var rename_bands_lt8 = function(image) {
     .copyProperties(image, ['system:time_start']);
 };
 
-// Emissivity scaling and performs LST calculation
+// Emissivity scaling and performs LST calculation using the 
+// single‑channel Planck‑corrected formula
 var lt8_lst = function (image) {
   // BT is already scaled by apply_scale_factors
   var bt     = image.select('ST_B10').rename('BT');             // Kelvin
@@ -396,10 +413,10 @@ var tctb = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filterDate(date_start, date_end)
   .filterBounds(bbox)
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
-  .map(mask_clouds_lt8)           // Mask clouds, shadows, saturation
-  .map(apply_scale_factors)  // Scale SR and ST_B10
+  .map(mask_clouds_lt8)      
+  .map(apply_scale_factors) 
   .map(rename_bands_lt8)
-  .map(lt8_tctb)            // Scale emissivity and compute TCTB
+  .map(lt8_tctb)            
   .select("TCTB");
   
 var tctb_md = tctb
@@ -452,10 +469,10 @@ var tctg = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filterDate(date_start, date_end)
   .filterBounds(bbox)
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
-  .map(mask_clouds_lt8)           // Mask clouds, shadows, saturation
-  .map(apply_scale_factors)  // Scale SR and ST_B10
+  .map(mask_clouds_lt8)     
+  .map(apply_scale_factors) 
   .map(rename_bands_lt8)
-  .map(lt8_tctg)            // Scale emissivity and compute TCTG
+  .map(lt8_tctg)            
   .select("TCTG");
   
 var tctg_md = tctg
@@ -508,10 +525,10 @@ var tctw = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filterDate(date_start, date_end)
   .filterBounds(bbox)
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
-  .map(mask_clouds_lt8)           // Mask clouds, shadows, saturation
-  .map(apply_scale_factors)  // Scale SR and ST_B10
+  .map(mask_clouds_lt8)         
+  .map(apply_scale_factors) 
   .map(rename_bands_lt8)
-  .map(lt8_tctw)            // Scale emissivity and compute TCTW
+  .map(lt8_tctw)           
   .select("TCTW");
   
 var tctw_md = tctw
