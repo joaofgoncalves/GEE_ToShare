@@ -245,6 +245,7 @@ var imcol_to_multiband = function(col) {
   return multi;
 }
 
+// Convert date format from YYYY-MM-dd to YYYY_MM_dd
 var convert_date = function(dateStr) {
   if (typeof dateStr !== 'string') {
     throw new TypeError('Expected a string');
@@ -267,7 +268,7 @@ var convert_date = function(dateStr) {
 
 // ROI Target area of analysis
 //
-// !! Replace this by a specific polygon or area of interest based on 
+// !! Replace this bbox by a specific polygon or area of interest based on 
 // an asset !!
  
 var bbox = 
@@ -316,8 +317,8 @@ For each variable (i.e., LST; TCTB, TCTG and TCTW) two images will be generated:
   - a multi-band image with one band for each date available;
   - A median image for the entire period of the analysis
 
-The file name will contain the name of the calculated variable, the data format (median or 
-the multiband time series) plus the dates, example:
+The file name will contain the name of the calculated variable, the data format 
+(median or the multiband time series) plus the dates, example:
 
   - LST_median_20210601_20210731
   - TCTG_multiband_20210601_20210731
