@@ -51,6 +51,30 @@ var maskL8SR = function(image) {
            .copyProperties(image, ['system:time_start']);
 }
 
+function renameL8Bands(image) {
+  var inputBands  = [
+    'SR_B1',  // Coastal aerosol (ultra blue)
+    'SR_B2',  // Blue
+    'SR_B3',  // Green
+    'SR_B4',  // Red
+    'SR_B5',  // Near-IR
+    'SR_B6',  // SWIR1
+    'SR_B7'   // SWIR2
+  ];
+  
+  var outputBands = [
+    'Ultrablue',
+    'Blue',
+    'Green',
+    'Red',
+    'NIR',
+    'SWIR1',
+    'SWIR2'
+  ];
+  
+  return image.select(inputBands, outputBands);
+}
+
 // Emissivity scaling and performs LST calculation
 var addLST = function (image) {
   // BT is already scaled by applyScaleFactors
@@ -336,6 +360,7 @@ var tctb = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
   .map(maskL8SR)           // Mask clouds, shadows, saturation
   .map(applyScaleFactors)  // Scale SR and ST_B10
+  .map(renameL8Bands)
   .map(lt8_tctb)            // Scale emissivity and compute TCTB
   .select("TCTB");
   
