@@ -7,7 +7,7 @@
 
 
 // Applies scaling factors
-var applyScaleFactors = function (image) {
+var apply_scale_factors = function (image) {
   var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
   var thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0);
   return image.addBands(opticalBands, null, true)
@@ -15,7 +15,7 @@ var applyScaleFactors = function (image) {
 }
 
 // Masks cloudy, cirrus, cloud-shadow, fill, and saturated pixels
-var maskL8SR = function(image) {
+var mask_clouds_lt8 = function(image) {
   // Select QA bands
   var qaPixel = image.select('QA_PIXEL');
   var qaRadsat = image.select('QA_RADSAT');
@@ -51,7 +51,7 @@ var maskL8SR = function(image) {
            .copyProperties(image, ['system:time_start']);
 };
 
-function renameL8Bands(image) {
+function rename_bands_lt8(image) {
   var inputBands  = [
     'SR_B1',  // Coastal aerosol (ultra blue)
     'SR_B2',  // Blue
@@ -79,7 +79,7 @@ function renameL8Bands(image) {
 
 // Emissivity scaling and performs LST calculation
 var addLST = function (image) {
-  // BT is already scaled by applyScaleFactors
+  // BT is already scaled by apply_scale_factors
   var bt     = image.select('ST_B10').rename('BT');             // Kelvin
   var emiss  = image.select('ST_EMIS').multiply(0.0001)
                     .rename('EMISSIVITY');                      // Unitless
@@ -216,7 +216,7 @@ var lt8_tctw = function (image) {
 };
 
 // Convert an ImageCollection into an Image keeping the dates
-var collectionToMultiBand = function(col) {
+var imcol_to_multiband = function(col) {
   // Make sure the collection is sorted by date
   col = col.sort('system:time_start');
   
@@ -278,19 +278,45 @@ var bbox =
           [-8.746530860345285, 41.78996510552295]]], null, false);
  
 // Analysis dates
+// Start date
 var date_start = '2021-06-01';
+// End date
 var date_end = '2021-07-31';
 
+// Name of the Google Drive folder used to export data
 var output_gdrive_folder = 'GEE_Exports';
+// Code of the reference (default is WGS 1984 GCS)
 var coord_ref_sys = 'EPSG:4326';
 
+// Output messages?
 var verbose = true;
+// Export data to Google Drive?
 var export_to_drive = true;
 
-//_______________________________________________________________________
+
+//________________________________________________
 //
 // DATA ANALYSIS AND EXPORTATION TO GOOGLE DRIVE
-//_______________________________________________________________________
+//________________________________________________
+
+/* 
+
+INPUT
+-----
+This is the process to generate the image collection:
+ - select the adequate satellite product
+ - apply a geographic filter based on the ROI
+ - mask cloudy pixels (clouds, cirrus, dilated clouds, etc)
+ - apply scale factors to convert to decimal reflectance / brightness temperature
+ - calculate the variable/index of interest
+
+OUTPUT
+------
+For each variable (i.e., LST; TCTB, TCTG and TCTW) two images will be generated:
+  - a multi-band image with one band for each date available;
+  - A median image for the entire period of the analysis
+  
+*/
 
 
 //_____________________________________
@@ -298,26 +324,20 @@ var export_to_drive = true;
 // LAND SURFACE TEMPERATURE (LST)
 //_____________________________________
 
-/* Define the image collection by:
- - select the adequate satellite product
- - apply a geographic filter based on the ROI
- - mask cloudy pixels (clouds, cirrus, dilated clouds, etc)
- - apply scale factors to convert to decimal reflectance / brightness temperature
- - calculate the variable/index of interest
-*/
+
 var lst = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filterDate(date_start, date_end)
   .filterBounds(bbox)
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
-  .map(maskL8SR)           // Mask clouds, shadows, saturation
-  .map(applyScaleFactors)  // Scale SR and ST_B10
+  .map(mask_clouds_lt8)           // Mask clouds, shadows, saturation
+  .map(apply_scale_factors)  // Scale SR and ST_B10
   .map(addLST)            // Scale emissivity and compute LST
   .select("LST_C");
   
 var lst_md = lst
   .median();
 
-var lst_mb_img = collectionToMultiBand(lst);
+var lst_mb_img = imcol_to_multiband(lst);
 
 
 if(export_to_drive){
@@ -329,7 +349,7 @@ if(export_to_drive){
     folder:      output_gdrive_folder,   
     fileNamePrefix: 'LST_median_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,                    
-    scale:       100,                     
+    scale:       apply_scale_factors,                     
     crs:         coord_ref_sys,
     maxPixels:   1e13
   });
@@ -341,7 +361,7 @@ if(export_to_drive){
     folder:      output_gdrive_folder,
     fileNamePrefix: 'LST_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,
-    scale:       100,
+    scale:       apply_scale_factors,
     crs:         coord_ref_sys,
     maxPixels:   1e13
   });
@@ -364,16 +384,16 @@ var tctb = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filterDate(date_start, date_end)
   .filterBounds(bbox)
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
-  .map(maskL8SR)           // Mask clouds, shadows, saturation
-  .map(applyScaleFactors)  // Scale SR and ST_B10
-  .map(renameL8Bands)
+  .map(mask_clouds_lt8)           // Mask clouds, shadows, saturation
+  .map(apply_scale_factors)  // Scale SR and ST_B10
+  .map(rename_bands_lt8)
   .map(lt8_tctb)            // Scale emissivity and compute TCTB
   .select("TCTB");
   
 var tctb_md = tctb
   .median();
 
-var tctb_mb_img = collectionToMultiBand(tctb);
+var tctb_mb_img = imcol_to_multiband(tctb);
 
 
 if(export_to_drive){
@@ -385,7 +405,7 @@ if(export_to_drive){
     folder:      output_gdrive_folder,   
     fileNamePrefix: 'TCTB_median_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,                    
-    scale:       100,                     
+    scale:       30,                     
     crs:         coord_ref_sys,
     maxPixels:   1e13
   });
@@ -397,7 +417,7 @@ if(export_to_drive){
     folder:      output_gdrive_folder,
     fileNamePrefix: 'TCTB_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,
-    scale:       100,
+    scale:       30,
     crs:         coord_ref_sys,
     maxPixels:   1e13
   });
@@ -420,16 +440,16 @@ var tctg = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filterDate(date_start, date_end)
   .filterBounds(bbox)
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
-  .map(maskL8SR)           // Mask clouds, shadows, saturation
-  .map(applyScaleFactors)  // Scale SR and ST_B10
-  .map(renameL8Bands)
+  .map(mask_clouds_lt8)           // Mask clouds, shadows, saturation
+  .map(apply_scale_factors)  // Scale SR and ST_B10
+  .map(rename_bands_lt8)
   .map(lt8_tctg)            // Scale emissivity and compute TCTG
   .select("TCTG");
   
 var tctg_md = tctg
   .median();
 
-var tctg_mb_img = collectionToMultiBand(tctg);
+var tctg_mb_img = imcol_to_multiband(tctg);
 
 
 if(export_to_drive){
@@ -441,7 +461,7 @@ if(export_to_drive){
     folder:      output_gdrive_folder,   
     fileNamePrefix: 'TCTG_median_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,                    
-    scale:       100,                     
+    scale:       30,                     
     crs:         coord_ref_sys,
     maxPixels:   1e13
   });
@@ -453,7 +473,7 @@ if(export_to_drive){
     folder:      output_gdrive_folder,
     fileNamePrefix: 'TCTG_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,
-    scale:       100,
+    scale:       30,
     crs:         coord_ref_sys,
     maxPixels:   1e13
   });
@@ -476,16 +496,16 @@ var tctw = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filterDate(date_start, date_end)
   .filterBounds(bbox)
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
-  .map(maskL8SR)           // Mask clouds, shadows, saturation
-  .map(applyScaleFactors)  // Scale SR and ST_B10
-  .map(renameL8Bands)
+  .map(mask_clouds_lt8)           // Mask clouds, shadows, saturation
+  .map(apply_scale_factors)  // Scale SR and ST_B10
+  .map(rename_bands_lt8)
   .map(lt8_tctw)            // Scale emissivity and compute TCTW
   .select("TCTW");
   
 var tctw_md = tctw
   .median();
 
-var tctw_mb_img = collectionToMultiBand(tctw);
+var tctw_mb_img = imcol_to_multiband(tctw);
 
 
 if(export_to_drive){
@@ -497,7 +517,7 @@ if(export_to_drive){
     folder:      output_gdrive_folder,   
     fileNamePrefix: 'TCTW_median_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,                    
-    scale:       100,                     
+    scale:       30,                     
     crs:         coord_ref_sys,
     maxPixels:   1e13
   });
@@ -509,7 +529,7 @@ if(export_to_drive){
     folder:      output_gdrive_folder,
     fileNamePrefix: 'TCTW_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,
-    scale:       100,
+    scale:       30,
     crs:         coord_ref_sys,
     maxPixels:   1e13
   });
@@ -520,9 +540,6 @@ if(verbose){
   print(tctw_mb_img);
   print(tctw_md);
 }
-
-
-
 
 
 
