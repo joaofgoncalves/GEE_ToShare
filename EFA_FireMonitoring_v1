@@ -293,9 +293,9 @@ if(export_to_drive){
   // --- Export the median LST (single-band) ---
   Export.image.toDrive({
     image:       lst_md,
-    description: 'LST median' + convert_date(date_start) + '_' + convert_date(date_end),
+    description: 'LST median' + '_' + convert_date(date_start) + '_' + convert_date(date_end),
     folder:      output_gdrive_folder,   
-    fileNamePrefix: 'LST_median' + convert_date(date_start) + '_' + convert_date(date_end),
+    fileNamePrefix: 'LST_median' + '_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,                    
     scale:       100,                     
     crs:         coord_ref_sys,
@@ -305,9 +305,9 @@ if(export_to_drive){
   // --- Export the multi-band LST composite ---
   Export.image.toDrive({
     image:       lst_mb_img,
-    description: 'LST multi-band time series' + convert_date(date_start) + '_' + convert_date(date_end),
+    description: 'LST multi-band time series' + '_' + convert_date(date_start) + '_' + convert_date(date_end),
     folder:      output_gdrive_folder,
-    fileNamePrefix: 'LST_multiband' + convert_date(date_start) + '_' + convert_date(date_end),
+    fileNamePrefix: 'LST_multiband' + '_' + convert_date(date_start) + '_' + convert_date(date_end),
     region:      bbox,
     scale:       100,
     crs:         coord_ref_sys,
