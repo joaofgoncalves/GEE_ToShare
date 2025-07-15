@@ -137,7 +137,7 @@ var lt8_tctb = function (image) {
       //.multiply(10000)
       //.toInt16();
       
-      //var image_idx = image.addBands([Brightness]);
+      var image_idx = image.addBands([Brightness]);
       return Brightness;
 };
 
@@ -159,7 +159,7 @@ var lt8_tctg = function (image) {
       //.multiply(10000)
       //.toInt16();
       
-      //var image_idx = image.addBands([Greenness]);
+      var image_idx = image.addBands([Greenness]);
       return Greenness;
 };
 
@@ -181,7 +181,7 @@ var lt8_tctw = function (image) {
       //.multiply(10000)
       //.toInt16();
       
-      //var image_idx = image.addBands([Wetness]);
+      var image_idx = image.addBands([Wetness]);
       return Wetness;
 };
 
@@ -270,11 +270,13 @@ var export_to_drive = true;
 
 /* Define the image collection by:
  - select the adequate satellite product
- -  apply a geographic filter based on the ROI
+ - apply a geographic filter based on the ROI
  - mask cloudy pixels (clouds, cirrus, dilated clouds, etc)
+ - apply scale factors to convert to decimal reflectance / brightness temperature
+ - calculate the variable/index of interest
 */
 var lst = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
-  .filterDate(date_start, '2021-07-31')
+  .filterDate(date_start, date_end)
   .filterBounds(bbox)
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
   .map(maskL8SR)           // Mask clouds, shadows, saturation
@@ -322,10 +324,66 @@ if(verbose){
 }
 
 
+//____________________________________________
+//
+// TASSELED CAP TRANSFORM - BRIGHTNESS (TCTB)
+//____________________________________________
+
+
+var tctb = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+  .filterDate(date_start, date_end)
+  .filterBounds(bbox)
+  .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
+  .map(maskL8SR)           // Mask clouds, shadows, saturation
+  .map(applyScaleFactors)  // Scale SR and ST_B10
+  .map(lt8_tctb)            // Scale emissivity and compute TCTB
+  .select("TCTB");
+  
+var tctb_md = tctb
+  .median();
+
+var tctb_mb_img = collectionToMultiBand(tctb);
+
+
+if(export_to_drive){
+  
+  // --- Export the median TCTB (single-band) ---
+  Export.image.toDrive({
+    image:       tctb_md,
+    description: 'TCTB_median_' + convert_date(date_start) + '_' + convert_date(date_end),
+    folder:      output_gdrive_folder,   
+    fileNamePrefix: 'TCTB_median_' + convert_date(date_start) + '_' + convert_date(date_end),
+    region:      bbox,                    
+    scale:       100,                     
+    crs:         coord_ref_sys,
+    maxPixels:   1e13
+  });
+  
+  // --- Export the multi-band TCTB composite ---
+  Export.image.toDrive({
+    image:       tctb_mb_img,
+    description: 'TCTB_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
+    folder:      output_gdrive_folder,
+    fileNamePrefix: 'TCTB_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
+    region:      bbox,
+    scale:       100,
+    crs:         coord_ref_sys,
+    maxPixels:   1e13
+  });
+}
+
+if(verbose){
+  print(tctb);
+  print(tctb_mb_img);
+  print(tctb_md);
+}
+
+
+
 /*
 Map.centerObject(bbox, 8);
 Map.addLayer(
-  lst_md.select('LST_C'),
+  lst_md.select('TCTB_C'),
   {min: 10, max: 40, palette: ['blue','green','yellow','red']},
   'LST (°C)'
 );
