@@ -1,0 +1,225 @@
+
+// ROI Target area of analysis
+// Replace this by a specific polygon or area of interest based on 
+// an asset 
+ 
+var bbox = 
+    ee.Geometry.Polygon(
+        [[[-8.88248667089216, 41.78996510552295],
+          [-8.88248667089216, 41.688517307033536],
+          [-8.746530860345285, 41.688517307033536],
+          [-8.746530860345285, 41.78996510552295]]], null, false);
+ 
+// ----------------------------------------------------------------
+// LANDSAT 8 / OLI
+// ----------------------------------------------------------------
+
+var dataset = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+    .filterDate('2021-06-01', '2021-07-31')
+    .filterBounds(bbox);
+
+
+// Applies scaling factors
+var applyScaleFactors = function (image) {
+  var opticalBands = image.select('SR_B.').multiply(0.0000275).add(-0.2);
+  var thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0);
+  return image.addBands(opticalBands, null, true)
+              .addBands(thermalBands, null, true);
+}
+
+/**
+ * Masks cloudy, cirrus, cloud-shadow, fill, and saturated pixels
+ * from a Landsat 8 Collection 2 Level 2 surface reflectance image.
+ *
+ * @param {ee.Image} image A single Landsat 8 C2 L2 SR image.
+ * @return {ee.Image} The input image masked to exclude cloudy and saturated pixels.
+ */
+var maskL8SR = function(image) {
+  // Select QA bands
+  var qaPixel = image.select('QA_PIXEL');
+  var qaRadsat = image.select('QA_RADSAT');
+
+  // Define bit masks for QA_PIXEL:
+  // Bit 0: Fill
+  // Bit 1: Dilated Cloud
+  // Bit 2: Cirrus (high confidence)
+  // Bit 3: Cloud (high confidence)
+  // Bit 4: Cloud Shadow (high confidence)
+  var fillMask       = qaPixel.bitwiseAnd(1 << 0).eq(0);
+  var dilatedCloud   = qaPixel.bitwiseAnd(1 << 1).eq(0);
+  var cirrus         = qaPixel.bitwiseAnd(1 << 2).eq(0);
+  var cloud          = qaPixel.bitwiseAnd(1 << 3).eq(0);
+  var cloudShadow    = qaPixel.bitwiseAnd(1 << 4).eq(0);
+
+  // Combine all QA_PIXEL masks
+  var qaMask = fillMask
+                .and(dilatedCloud)
+                .and(cirrus)
+                .and(cloud)
+                .and(cloudShadow);
+
+  // Mask out any radiometrically saturated pixels
+  var radsatMask = qaRadsat.eq(0);
+
+  // Apply both masks and return
+  return image
+           .updateMask(qaMask)
+           .updateMask(radsatMask)
+           // It's common to scale SR bands by 0.0000275 and subtract 0.2,
+           // but leave scaling to the user if desired.
+           .copyProperties(image, ['system:time_start']);
+}
+
+
+// 2. Emissivity scaling + LST calculation
+var addLST = function (image) {
+  // BT is already scaled by applyScaleFactors
+  var bt     = image.select('ST_B10').rename('BT');             // Kelvin
+  var emiss  = image.select('ST_EMIS').multiply(0.0001)
+                    .rename('EMISSIVITY');                      // Unitless
+
+  // Constants
+  var lambda = ee.Image.constant(10.895e-6);   // m
+  var rho    = ee.Image.constant(1.438e-2);    // m·K
+
+  // Planck‐corrected LST in Kelvin
+  var lstK = bt.divide(
+    ee.Image(1).add(
+      lambda.multiply(bt)
+            .divide(rho)
+            .multiply(emiss.log())
+    )
+  ).rename('LST_K');
+
+  // Convert to Celsius
+  var lstC = lstK.subtract(273.15).rename('LST_C'); // to deg Celsius
+
+  return image.addBands([bt, emiss, lstK, lstC]);
+}
+
+
+var tasseledcap_lt8 = function (image) {
+      var Brightness = image.expression(
+        
+        '(BLUE * 0.3029) + (GREEN * 0.2786) + (RED * 0.4733) + (NIR * 0.5599) + (SWIR1 * 0.508) + (SWIR2 * 0.1872)', {
+          
+          'BLUE': image.select('Blue'),
+          'GREEN': image.select('Green'),
+          'RED': image.select('Red'),
+          'NIR': image.select('NIR'),
+          'SWIR1': image.select('SWIR1'),
+          'SWIR2': image.select('SWIR2')
+      }).toFloat().rename('Brightness');
+      
+      var Greenness = image.expression(
+        
+        '(BLUE * -0.2941) + (GREEN * -0.243) + (RED * -0.5424) + (NIR * 0.7276) + (SWIR1 * 0.0713) + (SWIR2 * -0.1608)', {
+          
+          'BLUE': image.select('Blue'),
+          'GREEN': image.select('Green'),
+          'RED': image.select('Red'),
+          'NIR': image.select('NIR'),
+          'SWIR1': image.select('SWIR1'),
+          'SWIR2': image.select('SWIR2')
+      }).toFloat().rename('Greenness');
+      
+      var Wetness = image.expression(
+        
+        '(BLUE * 0.1511) + (GREEN * 0.1973) + (RED * 0.3283) + (NIR * 0.3407) + (SWIR1 * -0.7117) + (SWIR2 * -0.4559)', {
+          
+          'BLUE': image.select('Blue'),
+          'GREEN': image.select('Green'),
+          'RED': image.select('Red'),
+          'NIR': image.select('NIR'),
+          'SWIR1': image.select('SWIR1'),
+          'SWIR2': image.select('SWIR2')
+      }).toFloat().rename('Wetness');
+      
+      var image_idx = image.addBands([Brightness, Greenness, Wetness]);
+      return image_idx;
+};
+
+
+var lt8_tctb = function (image) {
+  
+      var Brightness = image.expression(
+        
+        '(BLUE * 0.3029) + (GREEN * 0.2786) + (RED * 0.4733) + (NIR * 0.5599) + (SWIR1 * 0.508) + (SWIR2 * 0.1872)', {
+          
+          'BLUE': image.select('Blue'),
+          'GREEN': image.select('Green'),
+          'RED': image.select('Red'),
+          'NIR': image.select('NIR'),
+          'SWIR1': image.select('SWIR1'),
+          'SWIR2': image.select('SWIR2')
+      })
+      .rename('TCTB');
+      //.multiply(10000)
+      //.toInt16();
+      
+      //var image_idx = image.addBands([Brightness]);
+      return Brightness;
+};
+
+
+var lt8_tctg = function (image) {
+  
+      var Greenness = image.expression(
+        
+        '(BLUE * -0.2941) + (GREEN * -0.243) + (RED * -0.5424) + (NIR * 0.7276) + (SWIR1 * 0.0713) + (SWIR2 * -0.1608)', {
+          
+          'BLUE': image.select('Blue'),
+          'GREEN': image.select('Green'),
+          'RED': image.select('Red'),
+          'NIR': image.select('NIR'),
+          'SWIR1': image.select('SWIR1'),
+          'SWIR2': image.select('SWIR2')
+      })
+      .rename('TCTG');
+      //.multiply(10000)
+      //.toInt16();
+      
+      //var image_idx = image.addBands([Greenness]);
+      return Greenness;
+};
+
+
+var lt8_tctw = function (image) {
+
+      var Wetness = image.expression(
+        
+        '(BLUE * 0.1511) + (GREEN * 0.1973) + (RED * 0.3283) + (NIR * 0.3407) + (SWIR1 * -0.7117) + (SWIR2 * -0.4559)', {
+          
+          'BLUE': image.select('Blue'),
+          'GREEN': image.select('Green'),
+          'RED': image.select('Red'),
+          'NIR': image.select('NIR'),
+          'SWIR1': image.select('SWIR1'),
+          'SWIR2': image.select('SWIR2')
+      })
+      .rename('TCTW');
+      //.multiply(10000)
+      //.toInt16();
+      
+      //var image_idx = image.addBands([Wetness]);
+      return Wetness;
+};
+
+
+var lst_md = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+  .filterDate('2021-06-01', '2021-06-30')
+  .filterBounds(bbox)
+  .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
+  .map(maskL8SR)           // Mask clouds, shadows, saturation
+  .map(applyScaleFactors)  // Scale SR and ST_B10
+  .map(addLST)            // Scale emissivity and compute LST
+  .median();
+
+//var sample = lst.first();
+Map.centerObject(bbox, 8);
+Map.addLayer(
+  lst_md.select('LST_C'),
+  {min: 10, max: 40, palette: ['blue','green','yellow','red']},
+  'LST (°C)'
+);
+
