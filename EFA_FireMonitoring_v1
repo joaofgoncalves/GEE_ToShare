@@ -1,5 +1,75 @@
 
 
+//________________________________________________
+//
+// DATA ANALYSIS AND EXPORTATION TO GOOGLE DRIVE
+//________________________________________________
+
+/*
+
+@João Gonçalves, 15/07/2025
+version 0.1.0
+
+
+INPUT
+-----
+This is the process to generate the image collection:
+ - select the adequate satellite product
+ - apply a geographic filter based on the ROI
+ - mask cloudy pixels (clouds, cirrus, dilated clouds, etc)
+ - apply scale factors to convert to decimal reflectance / brightness temperature
+ - calculate the variable/index of interest
+
+OUTPUT
+------
+For each variable (i.e., LST; TCTB, TCTG and TCTW) two images will be generated:
+  - a multi-band image with one band for each date available;
+  - A median image for the entire period of the analysis
+
+The file name will contain the name of the calculated variable, the data format 
+(median or the multiband time series) plus the dates, example:
+
+  - LST_median_20210601_20210731
+  - TCTG_multiband_20210601_20210731
+  
+*/
+
+
+//_______________________________________________________________________
+//
+// DEFINE ANALYSIS PARAMETERS
+//_______________________________________________________________________
+
+
+// ROI Target area of analysis
+//
+// !! Replace this bbox by a specific polygon or area of interest based on 
+// an asset !!
+ 
+var bbox = 
+    ee.Geometry.Polygon(
+        [[[-8.88248667089216, 41.78996510552295],
+          [-8.88248667089216, 41.688517307033536],
+          [-8.746530860345285, 41.688517307033536],
+          [-8.746530860345285, 41.78996510552295]]], null, false);
+ 
+// Analysis dates
+// Start date
+var date_start = '2021-06-01';
+// End date
+var date_end = '2021-07-31';
+
+// Name of the Google Drive folder used to export data
+var output_gdrive_folder = 'GEE_Exports';
+// Code of the reference (default is WGS 1984 GCS)
+var coord_ref_sys = 'EPSG:4326';
+
+// Output messages?
+var verbose = true;
+// Export data to Google Drive?
+var export_to_drive = true;
+
+
 //_______________________________________________________________________
 //
 // DEFINE ANCILLARY FUNCTIONS TO HANDLE LANDSAT 8 IMAGES
@@ -12,7 +82,7 @@ var apply_scale_factors = function (image) {
   var thermalBands = image.select('ST_B.*').multiply(0.00341802).add(149.0);
   return image.addBands(opticalBands, null, true)
               .addBands(thermalBands, null, true);
-}
+};
 
 // Masks cloudy, cirrus, cloud-shadow, fill, and saturated pixels
 var mask_clouds_lt8 = function(image) {
@@ -51,7 +121,7 @@ var mask_clouds_lt8 = function(image) {
            .copyProperties(image, ['system:time_start']);
 };
 
-function rename_bands_lt8(image) {
+var rename_bands_lt8 = function(image) {
   var inputBands  = [
     'SR_B1',  // Coastal aerosol (ultra blue)
     'SR_B2',  // Blue
@@ -75,10 +145,10 @@ function rename_bands_lt8(image) {
   return image
     .select(inputBands, outputBands)
     .copyProperties(image, ['system:time_start']);
-}
+};
 
 // Emissivity scaling and performs LST calculation
-var addLST = function (image) {
+var lt8_lst = function (image) {
   // BT is already scaled by apply_scale_factors
   var bt     = image.select('ST_B10').rename('BT');             // Kelvin
   var emiss  = image.select('ST_EMIS').multiply(0.0001)
@@ -260,71 +330,6 @@ var convert_date = function(dateStr) {
   return trimmed.replace(/-/g, '');
 }
 
-//_______________________________________________________________________
-//
-// DEFINE ANALYSIS PARAMETERS
-//_______________________________________________________________________
-
-
-// ROI Target area of analysis
-//
-// !! Replace this bbox by a specific polygon or area of interest based on 
-// an asset !!
- 
-var bbox = 
-    ee.Geometry.Polygon(
-        [[[-8.88248667089216, 41.78996510552295],
-          [-8.88248667089216, 41.688517307033536],
-          [-8.746530860345285, 41.688517307033536],
-          [-8.746530860345285, 41.78996510552295]]], null, false);
- 
-// Analysis dates
-// Start date
-var date_start = '2021-06-01';
-// End date
-var date_end = '2021-07-31';
-
-// Name of the Google Drive folder used to export data
-var output_gdrive_folder = 'GEE_Exports';
-// Code of the reference (default is WGS 1984 GCS)
-var coord_ref_sys = 'EPSG:4326';
-
-// Output messages?
-var verbose = true;
-// Export data to Google Drive?
-var export_to_drive = true;
-
-
-//________________________________________________
-//
-// DATA ANALYSIS AND EXPORTATION TO GOOGLE DRIVE
-//________________________________________________
-
-/* 
-
-INPUT
------
-This is the process to generate the image collection:
- - select the adequate satellite product
- - apply a geographic filter based on the ROI
- - mask cloudy pixels (clouds, cirrus, dilated clouds, etc)
- - apply scale factors to convert to decimal reflectance / brightness temperature
- - calculate the variable/index of interest
-
-OUTPUT
-------
-For each variable (i.e., LST; TCTB, TCTG and TCTW) two images will be generated:
-  - a multi-band image with one band for each date available;
-  - A median image for the entire period of the analysis
-
-The file name will contain the name of the calculated variable, the data format 
-(median or the multiband time series) plus the dates, example:
-
-  - LST_median_20210601_20210731
-  - TCTG_multiband_20210601_20210731
-  
-*/
-
 
 //_____________________________________
 //
@@ -338,7 +343,7 @@ var lst = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
   .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
   .map(mask_clouds_lt8)           // Mask clouds, shadows, saturation
   .map(apply_scale_factors)  // Scale SR and ST_B10
-  .map(addLST)            // Scale emissivity and compute LST
+  .map(lt8_lst)            // Scale emissivity and compute LST
   .select("LST_C");
   
 var lst_md = lst
