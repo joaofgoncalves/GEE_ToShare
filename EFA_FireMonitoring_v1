@@ -98,8 +98,12 @@ var addLST = function (image) {
   ).rename('LST_K');
 
   // Convert to Celsius
-  var lstC = lstK.subtract(273.15).rename('LST_C'); // to deg Celsius
-
+  var lstC = lstK
+    .subtract(273.15)
+    .rename('LST_C'); // to deg Celsius
+      //.multiply(10000)
+      //.toInt16();
+      
   return image.addBands([bt, emiss, lstK, lstC]);
 }
 
@@ -145,7 +149,7 @@ var tasseledcap_lt8 = function (image) {
       return image_idx;
 };
 
-// Calculate TCT wetness for Landsat 8
+// Calculate TCT Brightness for Landsat 8
 var lt8_tctb = function (image) {
   
       var Brightness = image.expression(
@@ -167,7 +171,7 @@ var lt8_tctb = function (image) {
       return image_tctb;
 };
 
-// Calculate TCT wetness for Landsat 8
+// Calculate TCT Greenness for Landsat 8
 var lt8_tctg = function (image) {
   
       var Greenness = image.expression(
@@ -189,7 +193,7 @@ var lt8_tctg = function (image) {
       return image_tctg;
 };
 
-// Calculate TCT wetness for Landsat 8
+// Calculate TCT Wetness for Landsat 8
 var lt8_tctw = function (image) {
 
       var Wetness = image.expression(
@@ -460,6 +464,64 @@ if(verbose){
   print(tctg_mb_img);
   print(tctg_md);
 }
+
+
+//____________________________________________
+//
+// TASSELED CAP TRANSFORM - GREENNESS (TCTG)
+//____________________________________________
+
+
+var tctw = ee.ImageCollection('LANDSAT/LC08/C02/T1_L2')
+  .filterDate(date_start, date_end)
+  .filterBounds(bbox)
+  .filter(ee.Filter.eq('PROCESSING_LEVEL', 'L2SP'))
+  .map(maskL8SR)           // Mask clouds, shadows, saturation
+  .map(applyScaleFactors)  // Scale SR and ST_B10
+  .map(renameL8Bands)
+  .map(lt8_tctw)            // Scale emissivity and compute TCTW
+  .select("TCTW");
+  
+var tctw_md = tctw
+  .median();
+
+var tctw_mb_img = collectionToMultiBand(tctw);
+
+
+if(export_to_drive){
+  
+  // --- Export the median TCTW (single-band) ---
+  Export.image.toDrive({
+    image:       tctw_md,
+    description: 'TCTW_median_' + convert_date(date_start) + '_' + convert_date(date_end),
+    folder:      output_gdrive_folder,   
+    fileNamePrefix: 'TCTW_median_' + convert_date(date_start) + '_' + convert_date(date_end),
+    region:      bbox,                    
+    scale:       100,                     
+    crs:         coord_ref_sys,
+    maxPixels:   1e13
+  });
+  
+  // --- Export the multi-band TCTW composite ---
+  Export.image.toDrive({
+    image:       tctw_mb_img,
+    description: 'TCTW_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
+    folder:      output_gdrive_folder,
+    fileNamePrefix: 'TCTW_multiband_' + convert_date(date_start) + '_' + convert_date(date_end),
+    region:      bbox,
+    scale:       100,
+    crs:         coord_ref_sys,
+    maxPixels:   1e13
+  });
+}
+
+if(verbose){
+  print(tctw);
+  print(tctw_mb_img);
+  print(tctw_md);
+}
+
+
 
 
 
